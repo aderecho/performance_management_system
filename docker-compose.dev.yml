@@ -1,0 +1,51 @@
+services:
+  frontend:
+    image: node:22-alpine
+    container_name: pm_frontend
+    working_dir: /app
+    volumes:
+      - ./perf-mgt-fe:/app
+      - node_modules:/app/node_modules
+    ports:
+      - "9000:9000"
+    command: sh -c "npm install && npx quasar dev -H 0.0.0.0 -p 9000"
+    depends_on:
+      - backend
+
+  backend:
+    build: ./perf-mgt-be
+    container_name: pm_backend
+    volumes:
+      - ./perf-mgt-be:/app
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env.dev
+    command: python manage.py runserver 0.0.0.0:8000
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: pm
+      POSTGRES_USER: itcadmin
+      POSTGRES_PASSWORD: ITC1234
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U itcadmin -d pm"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    env_file:
+      - .env.dev
+
+volumes:
+  postgres_data:
+  node_modules:

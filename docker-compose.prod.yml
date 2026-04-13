@@ -1,0 +1,42 @@
+services:
+  backend:
+    build: ./perf-mgt-be
+    image: pm_backend:prod
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    volumes:
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build: ./perf-mgt-fe
+    image: pm_frontend:prod
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:80"
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    environment:
+      POSTGRES_DB: $$POSTGRES_DB
+      POSTGRES_USER: $$POSTGRES_USER
+      POSTGRES_PASSWORD: $$POSTGRES_PASSWORD
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s 
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  static_volume:
+  media_volume:
