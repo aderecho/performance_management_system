@@ -1,7 +1,15 @@
 <template>
-  <q-table :title="title" :rows="props.rows" :columns="props.columns" :row-key="props.rowKey" :filter="search">
+  <q-table
+    flat
+    bordered
+    :title="title"
+    :rows="props.rows"
+    :columns="props.columns"
+    :row-key="props.rowKey"
+    :filter="showSearch ? search : undefined"
+  >
     <!-- SEARCH -->
-    <template v-slot:top-right>
+    <template v-if="showSearch" v-slot:top-right>
       <q-input borderless dense debounce="300" v-model="search" placeholder="Search">
         <template v-slot:append>
           <q-icon name="search" />
@@ -33,13 +41,18 @@
       </q-td>
     </template>
 
-    <!-- OPTIONAL SLOT EXTENSION -->
-    <!-- <slot /> -->
+    <template
+      v-for="slotName in passthroughSlotNames"
+      :key="slotName"
+      #[slotName]="slotProps"
+    >
+      <slot :name="slotName" v-bind="slotProps || {}" />
+    </template>
   </q-table>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { computed, ref, useSlots } from 'vue'
 import RowActions from 'src/components/RowActions.vue'
 
 const props = defineProps({
@@ -49,9 +62,26 @@ const props = defineProps({
   rowKey: {
     type: String,
     default: 'id'
+  },
+  showSearch: {
+    type: Boolean,
+    default: true
   }
 })
 
 const emit = defineEmits(['view', 'edit', 'delete'])
+const slots = useSlots()
 const search = ref('')
+
+const reservedSlotNames = [
+  'default',
+  'top-right',
+  'body-cell-is_active',
+  'body-cell-is_superuser',
+  'body-cell-actions'
+]
+
+const passthroughSlotNames = computed(() => {
+  return Object.keys(slots).filter(slotName => !reservedSlotNames.includes(slotName))
+})
 </script>

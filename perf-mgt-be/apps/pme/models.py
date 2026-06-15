@@ -31,7 +31,7 @@ class Template(models.Model):
     def __str__(self):
         return self.name
 
-
+#TEMPLATE NODE TYPE
 class TemplateNodeType(models.Model):
     """
     Defines allowed node types within a template

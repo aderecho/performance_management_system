@@ -70,10 +70,14 @@ CORS_EXPOSE_HEADERS = ["Content-Type", "X-CSRFToken"]
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
-CSRF_TRUSTED_ORIGINS = os.environ.get(
-    "CSRF_TRUSTED_ORIGINS",
-    ""
-).split(",")
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get(
+        "CSRF_TRUSTED_ORIGINS",
+        "http://localhost:9000,http://127.0.0.1:9000"
+    ).split(",")
+    if origin.strip()
+]
 
 # JWT Configuration
 from datetime import timedelta
@@ -118,11 +122,11 @@ WSGI_APPLICATION = 'perf_mgt.wsgi.application'
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ["POSTGRES_DB"],
-        "USER": os.environ["POSTGRES_USER"],
-        "PASSWORD": os.environ["POSTGRES_PASSWORD"],
-        "HOST": "db",
-        "PORT": "5432",
+        "NAME": os.environ.get("POSTGRES_DB", "pm"),
+        "USER": os.environ.get("POSTGRES_USER", "itcadmin"),
+        "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "ITC1234"),
+        "HOST": os.environ.get("POSTGRES_HOST", "127.0.0.1"),
+        "PORT": os.environ.get("POSTGRES_PORT", "5432"),
     }
 }
 

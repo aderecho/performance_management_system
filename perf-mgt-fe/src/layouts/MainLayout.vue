@@ -1,12 +1,12 @@
 <template>
-  <q-layout view="hHh lpR fFf" class="bg-page text-primary">
+  <q-layout view="hHh lpR fFf" class="bg-page text-primary main-layout">
     <AppHeader @toggle-drawer="toggleLeftDrawer" />
 
     <AppDrawer
       v-model="leftDrawerOpen"
     />
 
-    <q-page-container class="bg-page text-primary">
+    <q-page-container class="bg-page text-primary main-router-view">
       <router-view />
     </q-page-container>
   </q-layout>
@@ -23,3 +23,16 @@ function toggleLeftDrawer () {
   leftDrawerOpen.value = !leftDrawerOpen.value
 }
 </script>
+
+<style scoped>
+.main-layout {
+  height: 100vh;
+  overflow: hidden;
+}
+
+.main-router-view {
+  height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+</style>

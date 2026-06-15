@@ -8,6 +8,7 @@ from .views import (
     ItemViewSet,
     ReportingPeriodViewSet,
     InitiativeViewSet,
+    DashboardSummaryView
 )
 
 router = DefaultRouter()
@@ -25,5 +26,6 @@ report_submission_list = InitiativeViewSet.as_view({
 
 urlpatterns = [
     path("", include(router.urls)),
+    path("dashboard/summary/", DashboardSummaryView.as_view(), name="dashboard-summary"),
     path("items/<uuid:item_pk>/initiatives/",report_submission_list,name="item-initiatives-list"),
 ]

@@ -18,6 +18,7 @@ export const usePmeStore = defineStore('pmeStore', {
         reportingPeriods: [],
         showInitiativeModal: false,
         selectedInitiative: null,
+        dashboardSummary: null,
         filters: {
             item: null,
             // show_all: false
@@ -53,8 +54,7 @@ export const usePmeStore = defineStore('pmeStore', {
 
             } catch (err) {
                 notify.negative(
-                    `Failed to load document. ${
-                        err.response?.data?.message || 'Please try again.'
+                    `Failed to load document. ${err.response?.data?.message || 'Please try again.'
                     }`
                 )
             } finally {
@@ -160,6 +160,23 @@ export const usePmeStore = defineStore('pmeStore', {
         // FILTERS
         setFilters(newFilters) {
             this.filters = { ...newFilters }
+        },
+
+        // DASHBOARD
+        async fetchDashboardSummary(params = {}) {
+            this.loading = true
+
+            try {
+                const response = await api.get('/pme/dashboard/summary/', { params })
+                this.dashboardSummary = response.data
+            } catch (err) {
+                notify.negative(
+                    `Failed to load dashboard summary. ${err.response?.data?.message || 'Please try again.'
+                    }`
+                )
+            } finally {
+                this.loading = false
+            }
         }
     }
 })
