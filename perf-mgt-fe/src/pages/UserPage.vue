@@ -11,24 +11,28 @@
         <div class="row q-col-gutter-md q-mb-md">
 
             <div class="col-12 col-sm-6 col-md-4">
-                <DashboardCard title="Total Users" :value="userStore.stats?.total_users.value" icon="people"
+                <DashboardCard title="Total Users" :value="userStore.stats?.total_users.value" :icon="Users"
+                    :icon-size="26" icon-bg-class="bg-soft-blue" icon-color="blue-8"
                     :trend="userStore.stats?.total_users.trend + '% vs last month'" />
             </div>
 
             <div class="col-12 col-sm-6 col-md-4">
-                <DashboardCard title="Active Users" :value="userStore.stats?.active_users.value" icon="groups"
+                <DashboardCard title="Active Users" :value="userStore.stats?.active_users.value" :icon="UserCheck"
+                    :icon-size="26" icon-bg-class="bg-soft-green" icon-color="green-8"
                     :trend="userStore.stats?.active_users.trend + '% vs last month'" />
             </div>
 
             <div class="col-12 col-sm-6 col-md-4">
-                <DashboardCard title="New Users" :value="userStore.stats?.new_users.value" icon="person_add"
+                <DashboardCard title="New Users" :value="userStore.stats?.new_users.value" :icon="UserPlus"
+                    :icon-size="26" icon-bg-class="bg-soft-purple" icon-color="purple-8"
                     :trend="userStore.stats?.new_users.trend + '% vs last month'" />
             </div>
 
         </div>
 
-        <AppTable title="Users" :rows="userStore.users" :columns="columns" row-key="email" @view="handleView"
-            @edit="handleEdit" @delete="handleDelete" />
+        <AppTable title="List of Users" :rows="userStore.users" :columns="columns" row-key="email"
+            title-font-size="15px" search-width="400px" table-header-class="bg-surface text-white"
+            @view="handleView" @edit="handleEdit" @delete="handleDelete" />
 
         <ViewDialog v-model="showViewDialog" title="User Details" :data="selectedUser" :fields="userFields" />
 
@@ -44,6 +48,7 @@ import ViewDialog from 'src/components/admin/ViewDialog.vue'
 import FormDialog from 'src/components/admin/FormDialog.vue'
 import AppTable from 'src/components/admin/MarkupTable.vue'
 import { useUserStore } from 'src/stores/user'
+import { Users, UserCheck, UserPlus } from 'lucide-vue-next'
 
 const userStore = useUserStore()
 const showViewDialog = ref(false)
@@ -51,9 +56,9 @@ const selectedUser = ref(null)
 const showFormDialog = ref(false)
 
 const columns = [
-    { name: 'name', label: 'Name', field: row => row.profile.last_name + ', ' + row.profile.first_name, align: 'left' },
-    { name: 'email', label: 'Email', field: 'email', align: 'center' },
-    { name: 'primary_unit', label: 'Primary Unit', field: row => row.primary_unit, align: 'center' },
+    { name: 'name', label: 'Full Name', field: row => row.profile.last_name + ', ' + row.profile.first_name, align: 'left' },
+    { name: 'email', label: 'Email', field: 'email', align: 'left' },
+    { name: 'primary_unit', label: 'Primary Unit', field: row => row.primary_unit, align: 'left' },
     { name: 'is_active', label: 'Status', field: 'is_active', align: 'center' },
     { name: 'is_superuser', label: 'Super User', field: 'is_superuser', align: 'center' },
     { name: 'actions', label: 'Actions', field: 'actions', align: 'center' }

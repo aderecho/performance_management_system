@@ -17,7 +17,7 @@
         />
 
         <!-- OVERALL SUMMARY -->
-        <q-card flat bordered class="bg-white shadow-1 rounded-borders q-mb-md">
+        <q-card flat bordered class="bg-white shadow-1 q-mb-md rounded-4xl">
             <q-card-section class="q-pa-md">
                 <div class="q-mb-md">
                     <div class="text-h6 text-weight-bold text-dark">Overall Summary</div>
@@ -39,6 +39,7 @@
                             :total="measuresTotal"
                             :items="statusItems"
                             center-label="Measures"
+                            class="rounded-3xl"
                         />
                     </div>
 
@@ -52,8 +53,8 @@
                                 <q-card
                                     flat
                                     bordered
-                                    class="bg-white rounded-borders overflow-hidden"
-                                    style="min-height: 150px"
+                                    class="bg-white rounded-3xl overflow-hidden"
+                                    style="min-height: 150px; border-radius: 16px;"
                                 >
                                     <div
                                         style="height: 4px; background: linear-gradient(90deg, #2563eb 0%, #14b8a6 56%, #22c55e 100%)"
@@ -88,7 +89,7 @@
 
 
         <!-- OBJECTIVE SUMMARY -->
-        <q-card flat bordered class="bg-white shadow-1 rounded-borders q-mb-md">
+        <q-card flat bordered class="bg-white shadow-1 rounded-4xl q-mb-md">
             <q-card-section class="q-pa-md">
                 <div class="q-mb-md">
                     <div class="text-h6 text-weight-bold text-dark">Objective Summary</div>
@@ -120,7 +121,7 @@
                         <q-card
                             flat
                             bordered
-                            class="bg-white rounded-borders full-height"
+                            class="bg-white rounded-3xl full-height"
                             style="min-height: 294px"
                         >
                             <q-card-section class="q-pa-md">
@@ -151,6 +152,7 @@
                                 </div>
 
                                 <div class="row q-col-gutter-md items-center">
+                                    <!-- STATUS DISTRIBUTION CARD -->
                                     <div class="col-12 col-sm-3 row justify-center">
                                         <div
                                             class="relative-position"
@@ -232,7 +234,7 @@
         </q-card>
 
         <!-- DETAILED OBJECTIVE LIST -->
-        <q-card flat bordered class="bg-white shadow-1 rounded-borders">
+        <q-card flat bordered class="bg-white shadow-1 rounded-3xl">
             <q-card-section class="q-pa-md">
                 <div class="q-mb-md">
                     <div class="text-h6 text-weight-bold text-dark">Detailed Objective List</div>

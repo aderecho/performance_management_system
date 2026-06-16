@@ -3,6 +3,7 @@
         <div class="col-12 col-md">
             <q-input
                 v-model="local.search"
+                class="rounded-2xl"
                 outlined
                 dense
                 clearable
@@ -19,6 +20,7 @@
         <div class="col-12 col-md-3">
             <q-select
                 v-model="local.sra"
+                class="rounded-2xl"
                 :options="sraOptions"
                 option-label="label"
                 option-value="value"
@@ -35,6 +37,7 @@
         <div class="col-12 col-md-2">
             <q-select
                 v-model="local.status"
+                class="rounded-2xl"
                 :options="statusOptions"
                 option-label="label"
                 option-value="value"

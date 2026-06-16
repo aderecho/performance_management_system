@@ -1,5 +1,5 @@
 <template>
-    <q-card flat bordered class="bg-white rounded-borders full-height">
+    <q-card flat bordered class="bg-white full-height" style="border-radius: 16px;">
         <q-card-section class="q-pa-lg column items-center justify-center" :style="{ minHeight: cardMinHeight }">
             <div ref="chartRef" class="full-width" :style="{ maxWidth: chartWidth, height: chartHeight }"></div>
 

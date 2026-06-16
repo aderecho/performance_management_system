@@ -1,1 +1,73 @@
 // app global css in SCSS form
+
+.icon-soft {
+  align-items: center;
+  border-radius: 9999px;
+  display: flex;
+  height: 48px;
+  justify-content: center;
+  width: 48px;
+}
+
+.bg-soft-blue {
+  background-color: $soft-blue;
+}
+
+.bg-soft-green {
+  background-color: $soft-green;
+}
+
+.bg-soft-purple {
+  background-color: $soft-purple;
+}
+
+.bg-surface {
+  background-color: $surface;
+}
+
+// BORDERS
+
+.rounded-sm {
+  border-radius: 2px;
+}
+
+.rounded {
+  border-radius: 4px;
+}
+
+.rounded-md {
+  border-radius: 6px;
+}
+
+.rounded-lg {
+  border-radius: 8px;
+}
+
+.rounded-xl {
+  border-radius: 10px;
+}
+
+.rounded-2xl {
+  border-radius: 12px;
+}
+
+.rounded-2xl .q-field__control {
+  border-radius: 12px;
+}
+
+.rounded-2xl .q-field__control::before,
+.rounded-2xl .q-field__control::after {
+  border-radius: inherit;
+}
+
+.rounded-3xl {
+  border-radius: 16px;
+}
+
+.rounded-4xl {
+  border-radius: 18px;
+}
+
+.rounded-full {
+  border-radius: 9999px;
+}

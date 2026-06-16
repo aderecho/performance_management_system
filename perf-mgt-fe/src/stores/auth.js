@@ -47,7 +47,7 @@ export const useAuthStore = defineStore('authStore', {
     async checkSession() {
       this.checkingSession = true
       try {
-        const res = await api.get('/auth/session')
+        const res = await api.get('/auth/session/')
         this.user = res.data.user
         this.roles = res.data.user.roles || []
         this.permissions = res.data.user.permissions || []

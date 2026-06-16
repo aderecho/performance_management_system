@@ -1,6 +1,6 @@
 <template>
     <q-drawer :model-value="modelValue" @update:model-value="$emit('update:modelValue', $event)" show-if-above bordered
-        class="bg-surface text-primary" :width="280">
+        class="text-primary" :width="280">
         <q-scroll-area class="fit">
             <q-list class="text-primary q-pt-sm">
                 <q-item clickable to="/dashboard">

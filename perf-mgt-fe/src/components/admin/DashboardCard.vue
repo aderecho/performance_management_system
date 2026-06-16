@@ -1,21 +1,15 @@
 <template>
-  <q-card class="full-width">
+  <q-card flat bordered class="full-width shadow-8" style="border-radius: 16px;">
     <q-card-section>
 
       <!-- HEADER -->
       <div class="row items-center justify-between q-mb-sm">
-        <div class="text-caption text-grey-7">
+        <div class="text-caption text-weight-bold text-black">
           {{ title }}
         </div>
 
-        <div
-          :class="[
-            'q-pa-xs rounded-borders',
-            iconBgClass,
-            iconTextClass
-          ]"
-        >
-          <q-icon :name="icon" size="24px" />
+        <div :class="['icon-soft', iconColorClass, iconBgClass]">
+          <component :is="icon" :size="iconSize" :stroke-width="2" />
         </div>
       </div>
 
@@ -44,13 +38,20 @@ const props = defineProps({
     type: String,
     default: 'secondary'
   },
-  iconBg: {
+  iconColor: {
     type: String,
     default: 'primary'
+  },
+  iconSize: {
+    type: Number,
+    default: 24
+  },
+  iconBgClass: {
+    type: String,
+    default: null
   }
 })
 
 const trendColorClass = `text-${props.trendColor}`
-const iconBgClass = `bg-${props.iconBg}`
-const iconTextClass = 'text-white'
+const iconColorClass = `text-${props.iconColor}`
 </script>
