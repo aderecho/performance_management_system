@@ -3,19 +3,20 @@
         <div class="full-width">
 
 
-            <PageComboHeader :title="pmeStore.documentWithItems.template_name || ''"
+            <PageComboHeader :title="pmeDocumentStore.documentWithItems.template_name || ''"
             :breadcrumbs="[
                 { label: 'Home', to: '/' },
-                { label: pmeStore.documentWithItems.template_name || '' },
-                { label: pmeStore.documentWithItems.name || '' }
+                { label: pmeDocumentStore.documentWithItems.template_name || '' },
+                { label: pmeDocumentStore.documentWithItems.name || '' }
             ]"
             @apply="handleFilter"
+            @add-initiative="handleAddInitiative"
             >
                 <!-- TITLE -->
                 <template #title>
-                    <q-skeleton v-if="pmeStore.loading" type="text" width="260px" />
+                    <q-skeleton v-if="pmeDocumentStore.loading.document" type="text" width="260px" />
                     <span v-else>
-                        {{ pmeStore.documentWithItems.template_name }}
+                        {{ pmeDocumentStore.documentWithItems.template_name }}
                     </span>
                 </template>
 
@@ -26,47 +27,47 @@
 
                 <!-- BREADCRUMB 2 -->
                 <template #breadcrumb-1>
-                    <q-skeleton v-if="pmeStore.loading" type="text" width="140px" inline />
+                    <q-skeleton v-if="pmeDocumentStore.loading.document" type="text" width="140px" inline />
                     <span v-else>
-                        {{ pmeStore.documentWithItems.template_name }}
+                        {{ pmeDocumentStore.documentWithItems.template_name }}
                     </span>
                 </template>
 
                 <!-- BREADCRUMB 3 -->
                 <template #breadcrumb-2>
-                    <q-skeleton v-if="pmeStore.loading" type="text" width="160px" inline />
+                    <q-skeleton v-if="pmeDocumentStore.loading.document" type="text" width="160px" inline />
                     <span v-else>
-                        {{ pmeStore.documentWithItems.name }}
+                        {{ pmeDocumentStore.documentWithItems.name }}
                     </span>
                 </template>
             </PageComboHeader>
 
 
-            <HierarchyTable v-if="pmeStore.documentWithItems.items" :items="pmeStore.documentWithItems.items || []" :document-id="pmeStore.documentWithItems.id"
-                :document="pmeStore.documentWithItems" />
+            <HierarchyTable v-if="pmeDocumentStore.documentWithItems.items" :items="pmeDocumentStore.documentWithItems.items || []" :document-id="pmeDocumentStore.documentWithItems.id"
+                :document="pmeDocumentStore.documentWithItems" @open-initiatives="handleOpenInitiatives" />
 
-            <HierarchyTableSkeleton v-else-if="pmeStore.loading" />
+            <HierarchyTableSkeleton v-else-if="pmeDocumentStore.loading.document" />
 
-            <InitiativeFormModal v-model="pmeStore.showInitiativeFormModal" :items="pmeStore.documentWithItems.items || []"
-                :reporting-periods="pmeStore.reportingPeriods || []" @submitted="pmeStore.fetchDocument(route.params.documentId)"
-                :initiative="pmeStore.selectedInitiative" />
+            <InitiativeFormModal v-model="showInitiativeFormModal" :items="pmeDocumentStore.documentWithItems.items || []"
+                :reporting-periods="pmeDocumentStore.reportingPeriods || []" @submitted="handleInitiativeSubmitted"
+                :initiative="selectedInitiative" />
 
             <InitiativeListModal
-                v-model="pmeStore.showInitiativeModal"
-                :indicator="pmeStore.selectedIndicator"
-                :initiatives="pmeStore.initiatives"
-                @edit="pmeStore.onEditInitiative"
-                @accomplished="pmeStore.onMarkAsAccomplished"
-                @deleted="pmeStore.removeInitiative"
-                @reverted="pmeStore.revertAccomplishment"
+                v-model="showInitiativeModal"
+                :indicator="selectedIndicator"
+                :initiatives="initiativeStore.initiatives"
+                @edit="handleEditInitiative"
+                @accomplished="handleMarkAsAccomplished"
+                @deleted="handleDeleteInitiative"
+                @reverted="handleRevertAccomplishment"
             />
 
             <AccomplishmentFormModal
-                v-if="pmeStore.selectedInitiative"
-                v-model="pmeStore.showAccomplishmentFormModal"
-                :initiative="pmeStore.selectedInitiative"
-                :reporting-periods="pmeStore.reportingPeriods"
-                @submitted="pmeStore.onAccomplishmentSubmitted(route.params.documentId)"
+                v-if="selectedInitiative"
+                v-model="showAccomplishmentFormModal"
+                :initiative="selectedInitiative"
+                :reporting-periods="pmeDocumentStore.reportingPeriods"
+                @submitted="handleAccomplishmentSubmitted"
             />
 
         </div>
@@ -74,9 +75,10 @@
 </template>
 
 <script setup>
-import { watch } from 'vue'
+import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { usePmeStore } from 'src/stores/pme'
+import { usePmeDocumentStore } from 'src/stores/pme/pmeDocument'
+import { useInitiativeStore } from 'src/stores/pme/initiative'
 
 import PageComboHeader from 'src/components/pme/PageComboHeader.vue'
 import HierarchyTable from 'src/components/pme/HierarchyTable.vue'
@@ -87,19 +89,135 @@ import AccomplishmentFormModal from 'src/components/pme/AccomplishmentFormModal.
 
 const route = useRoute()
 
-const pmeStore = usePmeStore()
+const pmeDocumentStore = usePmeDocumentStore()
+const initiativeStore = useInitiativeStore()
+
+const showInitiativeFormModal = ref(false)
+const showInitiativeModal = ref(false)
+const showAccomplishmentFormModal = ref(false)
+const selectedIndicator = ref(null)
+const selectedInitiative = ref(null)
+
+function resetInitiativeUi() {
+  showInitiativeFormModal.value = false
+  showInitiativeModal.value = false
+  showAccomplishmentFormModal.value = false
+  selectedIndicator.value = null
+  selectedInitiative.value = null
+}
+
+async function refreshDocument() {
+  try {
+    return await pmeDocumentStore.fetchDocument(route.params.documentId)
+  } catch {
+    return null
+  }
+}
+
+async function refreshSelectedInitiatives() {
+  if (selectedIndicator.value?.id) {
+    try {
+      return await initiativeStore.fetchInitiatives(selectedIndicator.value.id)
+    } catch {
+      return []
+    }
+  }
+
+  return []
+}
 
 function handleFilter(filters) {
-  pmeStore.setFilters(filters)
-  pmeStore.fetchDocument(route.params.documentId)
+  pmeDocumentStore.setFilters(filters)
+  refreshDocument()
+}
+
+function handleAddInitiative() {
+  selectedInitiative.value = null
+  showInitiativeFormModal.value = true
+}
+
+async function handleOpenInitiatives(indicator) {
+  selectedIndicator.value = indicator
+
+  try {
+    await initiativeStore.fetchInitiatives(indicator.id)
+    showInitiativeModal.value = true
+  } catch {
+    selectedIndicator.value = null
+  }
+}
+
+function handleEditInitiative(row) {
+  selectedInitiative.value = row
+  showInitiativeFormModal.value = true
+}
+
+function handleMarkAsAccomplished(row) {
+  selectedInitiative.value = row
+  showAccomplishmentFormModal.value = true
+}
+
+async function handleInitiativeSubmitted() {
+  showInitiativeFormModal.value = false
+  selectedInitiative.value = null
+
+  await refreshDocument()
+  await refreshSelectedInitiatives()
+}
+
+async function handleDeleteInitiative(row) {
+  try {
+    await initiativeStore.deleteInitiative(row.id)
+    await refreshDocument()
+  } catch {
+    // The store action already notified the user.
+  }
+}
+
+async function handleAccomplishmentSubmitted(payload) {
+  if (!selectedInitiative.value) return
+
+  try {
+    await initiativeStore.markAccomplished(selectedInitiative.value.id, payload)
+
+    showAccomplishmentFormModal.value = false
+    selectedInitiative.value = null
+
+    await refreshDocument()
+    await refreshSelectedInitiatives()
+  } catch {
+    // The store action already notified the user.
+  }
+}
+
+async function handleRevertAccomplishment(row) {
+  try {
+    await initiativeStore.revertAccomplishment(row.id)
+    await refreshDocument()
+    await refreshSelectedInitiatives()
+  } catch {
+    // The store action already notified the user.
+  }
 }
 
 watch(
     () => route.params.documentId,
-    (newId) => {
+    async (newId) => {
         if (newId) {
-            pmeStore.fetchDocument(newId)
-            pmeStore.fetchReportingPeriods(newId)
+            resetInitiativeUi()
+            pmeDocumentStore.clearDocumentState()
+
+            try {
+                await pmeDocumentStore.fetchDocument(newId)
+            } catch {
+                // The store action already notified the user.
+            }
+
+            try {
+                await pmeDocumentStore.fetchReportingPeriods(newId)
+            } catch {
+                // The store action already notified the user.
+            }
         }
     },
     { immediate: true }

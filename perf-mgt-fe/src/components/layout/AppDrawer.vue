@@ -84,10 +84,14 @@ const adminLinks = [
     { icon: 'list', text: 'Audit Logs', to: '/admin/audit-logs' },
 ]
 
-onMounted(() => {
+onMounted(async () => {
     // preserve original behavior
     if (!configStore.templateList?.length) {
-        configStore.getTemplateList()
+        try {
+            await configStore.getTemplateList()
+        } catch {
+            // Store captures the error state.
+        }
     }
 })
 </script>

@@ -1,7 +1,6 @@
 <template>
-  <q-card flat bordered class="full-width shadow-8" style="border-radius: 16px;">
+  <q-card flat bordered class="full-width shadow-8 rounded-3xl">
     <q-card-section>
-
       <!-- HEADER -->
       <div class="row items-center justify-between q-mb-sm">
         <div class="text-caption text-weight-bold text-black">
@@ -17,13 +16,9 @@
         {{ value }}
       </div>
 
-      <div
-        v-if="trend"
-        :class="['text-caption', trendColorClass]"
-      >
+      <div v-if="trend" :class="['text-caption', trendColorClass]">
         {{ trend }}
       </div>
-
     </q-card-section>
   </q-card>
 </template>
@@ -36,20 +31,20 @@ const props = defineProps({
   trend: String,
   trendColor: {
     type: String,
-    default: 'secondary'
+    default: 'secondary',
   },
   iconColor: {
     type: String,
-    default: 'primary'
+    default: 'primary',
   },
   iconSize: {
     type: Number,
-    default: 24
+    default: 24,
   },
   iconBgClass: {
     type: String,
-    default: null
-  }
+    default: null,
+  },
 })
 
 const trendColorClass = `text-${props.trendColor}`

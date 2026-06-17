@@ -3,7 +3,7 @@
     <q-markup-table>
       <thead>
         <tr>
-          <th class="text-left" style="width: 150px">
+          <th class="text-left w-150">
             <q-skeleton animation="blink" type="text" />
           </th>
           <th class="text-right">

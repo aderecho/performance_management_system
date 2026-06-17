@@ -7,12 +7,12 @@
     :row-key="props.rowKey"
     :filter="showSearch ? search : undefined"
     :table-header-class="tableHeaderClass"
-    style="border-radius: 16px;"
+    class="rounded-3xl"
   >
     <template v-slot:top>
-      <div class="row full-width items-center justify-between ">
+      <div class="row full-width items-center justify-between">
         <div class="col-12 col-sm">
-          <div v-if="title" :class="titleWeightClass" :style="titleStyle">
+          <div v-if="title" :class="[titleWeightClass, 'markup-table-title']" :style="titleVars">
             {{ title }}
           </div>
         </div>
@@ -20,8 +20,8 @@
         <div v-if="showSearch" class="col-12 col-sm-auto">
           <q-input
             v-model="search"
-            class="rounded-2xl"
-            :style="searchStyle"
+            class="rounded-2xl markup-table-search"
+            :style="searchVars"
             outlined
             dense
             clearable
@@ -38,7 +38,14 @@
 
     <template v-slot:body-cell-is_active="props">
       <q-td :props="props">
-        <q-chip :color="props.row.is_active ? 'positive' : 'negative'" class="q-px-md q-py-sm" text-color="white" dense size="md" outline>
+        <q-chip
+          :color="props.row.is_active ? 'positive' : 'negative'"
+          class="q-px-md q-py-sm"
+          text-color="white"
+          dense
+          size="md"
+          outline
+        >
           {{ props.row.is_active ? 'Active' : 'Inactive' }}
         </q-chip>
       </q-td>
@@ -46,7 +53,14 @@
 
     <template v-slot:body-cell-is_superuser="props">
       <q-td :props="props">
-        <q-chip :color="props.row.is_superuser ? 'positive' : 'negative'" class="q-px-md" text-color="white" dense size="md" outline>
+        <q-chip
+          :color="props.row.is_superuser ? 'positive' : 'negative'"
+          class="q-px-md"
+          text-color="white"
+          dense
+          size="md"
+          outline
+        >
           {{ props.row.is_superuser ? 'Yes' : 'No' }}
         </q-chip>
       </q-td>
@@ -54,17 +68,16 @@
 
     <template v-slot:body-cell-actions="props">
       <q-td :props="props">
-
-        <RowActions :row="props.row" @view="emit('view', $event)" @edit="emit('edit', $event)" @delete="emit('delete', $event)" />
-
+        <RowActions
+          :row="props.row"
+          @view="emit('view', $event)"
+          @edit="emit('edit', $event)"
+          @delete="emit('delete', $event)"
+        />
       </q-td>
     </template>
 
-    <template
-      v-for="slotName in passthroughSlotNames"
-      :key="slotName"
-      #[slotName]="slotProps"
-    >
+    <template v-for="slotName in passthroughSlotNames" :key="slotName" #[slotName]="slotProps">
       <slot :name="slotName" v-bind="slotProps || {}" />
     </template>
   </q-table>
@@ -80,45 +93,44 @@ const props = defineProps({
   columns: Array,
   rowKey: {
     type: String,
-    default: 'id'
+    default: 'id',
   },
   showSearch: {
     type: Boolean,
-    default: true
+    default: true,
   },
   tableHeaderClass: {
     type: String,
-    default: ''
+    default: '',
   },
   titleFontSize: {
     type: String,
-    default: '20px'
+    default: '20px',
   },
   titleWeightClass: {
     type: String,
-    default: 'text-weight-bold'
+    default: 'text-weight-bold',
   },
   searchPlaceholder: {
     type: String,
-    default: 'Search'
+    default: 'Search',
   },
   searchWidth: {
     type: String,
-    default: '280px'
-  }
+    default: '280px',
+  },
 })
 
 const emit = defineEmits(['view', 'edit', 'delete'])
 const slots = useSlots()
 const search = ref('')
 
-const titleStyle = computed(() => ({
-  fontSize: props.titleFontSize,
-  lineHeight: 1.2
+const titleVars = computed(() => ({
+  '--markup-table-title-font-size': props.titleFontSize,
 }))
 
-const searchStyle = computed(() => ({
-  width: props.searchWidth
+const searchVars = computed(() => ({
+  '--markup-table-search-width': props.searchWidth,
 }))
 
 const reservedSlotNames = [
@@ -126,10 +138,10 @@ const reservedSlotNames = [
   'top-right',
   'body-cell-is_active',
   'body-cell-is_superuser',
-  'body-cell-actions'
+  'body-cell-actions',
 ]
 
 const passthroughSlotNames = computed(() => {
-  return Object.keys(slots).filter(slotName => !reservedSlotNames.includes(slotName))
+  return Object.keys(slots).filter((slotName) => !reservedSlotNames.includes(slotName))
 })
 </script>

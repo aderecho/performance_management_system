@@ -8,7 +8,7 @@ export const useAuthStore = defineStore('authStore', {
     user: null,
     roles: [],
     permissions: [],
-    initialized: false,
+    // initialized: false,
     sessionChecked: false,
   }),
 
@@ -25,20 +25,29 @@ export const useAuthStore = defineStore('authStore', {
   },
 
   actions: {
+    clearSession() {
+      this.user = null
+      this.roles = []
+      this.permissions = []
+      this.sessionChecked = true
+    },
+
     async login(email, password) {
       this.checkingSession = true
 
       try {
         await api.post('/auth/login/', { email, password })
-        await this.checkSession()
-        notify.positive(`Welcome back, ${email}!`)
+        const user = await this.checkSession()
 
-        if (this.router.currentRoute.value.path === '/login') {
-          this.router.push('/')
+        if (!user) {
+          throw new Error('Unable to verify session.')
         }
 
-      } catch {
-        this.user = null
+        notify.positive(`Welcome back, ${email}!`)
+        return user
+      } catch (err) {
+        this.clearSession()
+        throw err
       } finally {
         this.checkingSession = false
       }
@@ -51,21 +60,23 @@ export const useAuthStore = defineStore('authStore', {
         this.user = res.data.user
         this.roles = res.data.user.roles || []
         this.permissions = res.data.user.permissions || []
+        this.sessionChecked = true
+        return this.user
       } catch {
-        this.user = null
-        this.roles = []
-        this.permissions = []
+        this.clearSession()
+        return null
       } finally {
         this.checkingSession = false
       }
     },
 
     async logout() {
-      await api.post('auth/logout/')
-      this.user = null
-      this.roles = []
-      this.permissions = []
-      this.router.push('/login')
+      try {
+        await api.post('/auth/logout/')
+        return true
+      } finally {
+        this.clearSession()
+      }
     }
   },
 })

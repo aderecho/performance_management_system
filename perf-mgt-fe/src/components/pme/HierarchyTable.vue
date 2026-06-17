@@ -32,6 +32,7 @@
         :level="0"
         :document-id="documentId"
         :document="document"
+        @open-initiatives="$emit('open-initiatives', $event)"
       />
     </tbody>
   </q-markup-table>
@@ -54,4 +55,6 @@ defineProps({
     required: true
   }
 })
+
+defineEmits(['open-initiatives'])
 </script>

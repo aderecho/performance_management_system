@@ -1,13 +1,10 @@
 <template>
-  <div ref="chartRef" style="width: 100%; height: 400px;"></div>
+  <div ref="chartRef" class="initiative-bar-chart"></div>
 </template>
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import * as echarts from 'echarts'
-import { usePmeStore } from 'src/stores/pme'
-
-const pmeStore = usePmeStore();
 
 const props = defineProps({
   categories: Array,
@@ -25,15 +22,15 @@ const initChart = () => {
   const option = {
     xAxis: {
       type: 'category',
-      data: pmeStore.documentYears.years
+      data: props.categories || [],
     },
     yAxis: { type: 'value' },
     series: [
       {
         data: props.values,
-        type: 'bar'
-      }
-    ]
+        type: 'bar',
+      },
+    ],
   }
 
   chart.setOption(option)

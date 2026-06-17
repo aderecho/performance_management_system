@@ -9,6 +9,68 @@
   width: 48px;
 }
 
+// FONT SIZES
+
+.text-xs {
+  font-size: 0.75rem;
+}
+
+.text-2xs {
+  font-size: 0.6875rem;
+}
+
+.text-sm {
+  font-size: 0.875rem;
+}
+
+.text-13 {
+  font-size: 13px;
+}
+
+.text-base {
+  font-size: 1rem;
+}
+
+.text-lg {
+  font-size: 1.125rem;
+}
+
+.text-xl {
+  font-size: 1.25rem;
+}
+
+.text-2xl {
+  font-size: 1.5rem;
+}
+
+.text-3xl {
+  font-size: 1.875rem;
+}
+
+.text-4xl {
+  font-size: 2.25rem;
+}
+
+.text-5xl {
+  font-size: 3rem;
+}
+
+// LINE HEIGHTS
+
+.leading-26 {
+  line-height: 26px;
+}
+
+.leading-none {
+  line-height: 1;
+}
+
+.leading-snug {
+  line-height: 1.35;
+}
+
+// BACKGROUND COLORS
+
 .bg-soft-blue {
   background-color: $soft-blue;
 }
@@ -23,6 +85,31 @@
 
 .bg-surface {
   background-color: $surface;
+}
+
+.bg-grey {
+  background-color: $grey;
+}
+
+.bg-status-on_track {
+  background-color: $status-on-track;
+}
+
+.bg-status-major_disruption {
+  background-color: $status-major-disruption;
+}
+
+.bg-status-completed {
+  background-color: $status-completed;
+}
+
+.bg-status-no_update,
+.bg-status-default {
+  background-color: $status-default;
+}
+
+.bg-gradient-primary-ocean {
+  background: $gradient-primary-ocean;
 }
 
 // BORDERS
@@ -70,4 +157,141 @@
 
 .rounded-full {
   border-radius: 9999px;
+}
+
+.border-b {
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
+}
+
+.border-dashed {
+  gap: 8px;
+  border-bottom: 1px dashed #e2e8f0;
+}
+
+.border-slate-200 {
+  border-color: #e2e8f0;
+}
+
+.border-blue-grey-200 {
+  border-color: #d8dee8;
+}
+
+// HEIGHTS
+.h-1 {
+  height: 4px;
+}
+
+.h-7 {
+  height: 26px;
+}
+
+.h-122 {
+  height: 122px;
+}
+
+.min-h-150 {
+  min-height: 150px;
+}
+
+.min-h-294 {
+  min-height: 294px;
+}
+
+// WIDTHS
+
+.min-w-0 {
+  min-width: 0;
+}
+
+.w-30 {
+  width: 118px;
+}
+
+// SPACING
+
+.gap-2 {
+  gap: 8px;
+}
+
+.gap-14 {
+  gap: 14px;
+}
+
+.pr-2 {
+  padding-right: 8px;
+}
+
+// FLEX
+
+.flex-1 {
+  flex: 1 1 0%;
+}
+
+.flex-auto {
+  flex: 1 1 auto;
+}
+
+.flex-initial {
+  flex: 0 1 auto;
+}
+
+.flex-none {
+  flex: none;
+}
+
+.z-1 {
+  z-index: 1;
+}
+
+// DASHBOARD
+
+.dashboard-progress-fill {
+  background: $status-completed;
+  height: 100%;
+  width: var(--dashboard-progress-width);
+}
+
+.status-distribution-card {
+  height: var(--status-distribution-height);
+  width: var(--status-distribution-width);
+}
+
+.status-distribution-section {
+  min-height: var(--status-distribution-min-height);
+}
+
+.status-distribution-donut {
+  aspect-ratio: 1;
+  background: var(--status-distribution-donut-background);
+  border-radius: 50%;
+  width: min(var(--status-distribution-donut-size), 100%);
+}
+
+.status-distribution-inner-circle {
+  border-radius: 50%;
+  height: var(--status-distribution-inner-size);
+  width: var(--status-distribution-inner-size);
+}
+
+.status-distribution-dot {
+  background-color: var(--status-distribution-dot-color);
+  border: 2px solid #e8edf5;
+  border-radius: 50%;
+  height: 12px;
+  width: 12px;
+}
+
+.progress-gauge-section {
+  min-height: var(--progress-gauge-card-min-height);
+}
+
+.progress-gauge-chart {
+  height: var(--progress-gauge-chart-height);
+  max-width: var(--progress-gauge-chart-width);
+}
+
+.progress-gauge-labels {
+  margin-top: var(--progress-gauge-label-margin-top);
+  max-width: var(--progress-gauge-label-width);
 }

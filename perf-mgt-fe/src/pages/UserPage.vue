@@ -36,7 +36,7 @@
 
         <ViewDialog v-model="showViewDialog" title="User Details" :data="selectedUser" :fields="userFields" />
 
-        <FormDialog v-model="showFormDialog" title="User" :data="selectedUser" :loading="userStore.loading"
+        <FormDialog v-model="showFormDialog" title="User" :data="selectedUser" :loading="userStore.loading.save"
             @submit="handleSubmit" />
     </div>
 </template>
@@ -182,8 +182,17 @@ const buttons = [
     },
 ]
 
-onMounted(() => {
-    userStore.fetchUsers()
-    userStore.fetchUserStats()
+onMounted(async () => {
+    try {
+        await userStore.fetchUsers()
+    } catch {
+        // Store captures the error state.
+    }
+
+    try {
+        await userStore.fetchUserStats()
+    } catch {
+        // Store captures the error state.
+    }
 })
 </script>
