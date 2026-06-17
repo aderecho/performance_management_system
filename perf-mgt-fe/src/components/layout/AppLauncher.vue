@@ -1,7 +1,7 @@
 <template>
   <q-btn round dense flat icon="apps" color="white">
     <q-menu anchor="bottom right" self="top right">
-      <q-card class="bg-card text-primary" style="min-width:280px;max-width:320px">
+      <q-card class="bg-card text-primary menu-card-contained">
         <q-card-section class="row q-col-gutter-md q-pa-md">
           <q-item
             v-for="app in apps"
@@ -12,7 +12,7 @@
             target="_blank"
             class="col-4 column items-center text-center app-tile"
           >
-            <img :src="app.icon" style="height:48px" />
+            <img :src="app.icon" class="h-7" />
             <div class="text-caption q-mt-sm">{{ app.name }}</div>
           </q-item>
         </q-card-section>

@@ -74,7 +74,7 @@ CREATE TABLE templates (
 -- =========================
 CREATE TABLE node_types (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    template_id UUID NOT NULL REFERENCES templates(id) ON DELETE CASCADE,
+    template_id UUID NOT NULL REFERENCES templates(id) ON DELETE CASCADE, 
     name VARCHAR(255) NOT NULL,
     short_code VARCHAR(50),
     description TEXT,

@@ -7,12 +7,29 @@ export const useConfigStore = defineStore('configStore', {
     templateList: [],
     templateNodeTypeList: [],
     darkMode: false,
+    loading: {
+      templates: false,
+    },
+    error: {
+      templates: null,
+    },
   }),
   getters: {},
   actions: {
     async getTemplateList () {
-      const response = await api.get("pme/templates/")
-      this.templateList = response.data
+      this.loading.templates = true
+      this.error.templates = null
+
+      try {
+        const response = await api.get("pme/templates/")
+        this.templateList = response.data
+        return response.data
+      } catch (err) {
+        this.error.templates = err.response?.data || err.message
+        throw err
+      } finally {
+        this.loading.templates = false
+      }
     },
 
     // async getTemplateNodeTypeList () {

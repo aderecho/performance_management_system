@@ -1,5 +1,6 @@
 import { defineBoot } from '#q-app/wrappers'
 import axios from 'axios'
+import { useAuthStore } from 'src/stores/auth'
 
 const api = axios.create({
   baseURL: process.env.API_BASE_URL || 'http://localhost:8000/api/v1',
@@ -20,9 +21,10 @@ const processQueue = (error = null) => {
   failedQueue = []
 }
 
-export default defineBoot(({ app, router }) => {
+export default defineBoot(({ app, router, store }) => {
   app.config.globalProperties.$axios = axios
   app.config.globalProperties.$api = api
+  const authStore = useAuthStore(store)
 
   api.interceptors.response.use(
     response => response,
@@ -57,7 +59,14 @@ export default defineBoot(({ app, router }) => {
           return api(originalRequest)
         } catch (refreshError) {
           processQueue(refreshError)
-          await api.post('/auth/logout/')
+
+          try {
+            await api.post('/auth/logout/')
+          } catch {
+            // Ignore logout failure; the client session is already invalid.
+          }
+
+          authStore.clearSession()
           router.push('/login')
           return Promise.reject(refreshError)
         } finally {

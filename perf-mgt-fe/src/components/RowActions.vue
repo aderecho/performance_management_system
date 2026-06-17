@@ -1,14 +1,17 @@
 <template>
-    <div class="row items-center justify-center q-gutter-xs">
-        <q-btn size="sm" flat round icon="visibility" color="secondary" @click="$emit('view', row)">
+    <div class="row items-center justify-center ">
+        <q-btn size="sm" flat round color="secondary" @click="$emit('view', row)">
+            <Eye :size="18" :stroke-width="2" />
             <q-tooltip>View</q-tooltip>
         </q-btn>
 
-        <q-btn size="sm" flat round icon="edit" color="warning" @click="$emit('edit', row)">
+        <q-btn size="sm" flat round color="warning" @click="$emit('edit', row)">
+            <SquarePen :size="18" :stroke-width="2" />
             <q-tooltip>Edit</q-tooltip>
         </q-btn>
 
-        <q-btn size="sm" flat round icon="delete" color="negative" @click="$emit('delete', row)">
+        <q-btn size="sm" flat round color="negative" @click="$emit('delete', row)">
+            <Trash2 :size="18" :stroke-width="2" />
             <q-tooltip>Delete</q-tooltip>
         </q-btn>
 
@@ -17,6 +20,8 @@
 </template>
 
 <script setup>
+import { Eye, SquarePen, Trash2 } from 'lucide-vue-next'
+
 defineProps({
     row: {
         type: Object,

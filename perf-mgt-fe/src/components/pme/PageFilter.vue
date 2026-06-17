@@ -69,9 +69,10 @@
 <script setup>
 import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { api } from 'boot/axios'
+import { usePmeDocumentStore } from 'src/stores/pme/pmeDocument'
 
 const route = useRoute()
+const pmeDocumentStore = usePmeDocumentStore()
 const emit = defineEmits(['apply'])
 
 const show_all = ref(false)
@@ -82,21 +83,14 @@ const selected = ref([])
 // Load hierarchy level
 async function loadLevel(documentId, parentId = null, levelIndex = 0) {
   try {
-    const response = await api.get('/pme/items/', {
-      params: {
-        document: documentId,
-        parent: parentId
-      }
-    })
-
-    const options = response.data
+    const options = await pmeDocumentStore.fetchFilterItems(documentId, parentId)
 
     if (!options.length) return
 
     levels.value[levelIndex] = { options }
 
-  } catch (err) {
-    console.error('Failed to load level:', err)
+  } catch {
+    // Already put error notification in the pmeDocumentStore.fetchFilterItems()
   }
 }
 

@@ -1,27 +1,19 @@
-<style>
-.wrap-table .q-table__middle table {
-  table-layout: fixed;
-  width: 100%;
-}
-.wrap-table td.wrap-cell,
-.wrap-table td.wrap-cell .q-td,
-.wrap-table td.wrap-cell .q-td > div {
-  white-space: normal !important;
-  word-break: break-word !important;
-  overflow-wrap: anywhere !important;
-}
-</style>
 <template>
   <q-dialog :model-value="modelValue" @update:model-value="updateDialog">
-    <q-card style="width: 1000px; max-width: 90vw;">
+    <q-card class="dialog-lg">
       <q-card-section class="q-mb-none">
         <div class="text-h6">Initiatives</div>
         <div class="text-caption text-grey">{{ indicator?.code }} {{ indicator?.name }}</div>
       </q-card-section>
 
       <q-card-section>
-        <q-table v-if="initiatives && initiatives.length" class="q-pa-none q-ma-none wrap-table" :rows="initiatives" :columns="columns" row-key="id">
-
+        <q-table
+          v-if="initiatives && initiatives.length"
+          class="q-pa-none q-ma-none wrap-table"
+          :rows="initiatives"
+          :columns="columns"
+          row-key="id"
+        >
           <template #body-cell-is_accomplished="props">
             <q-td align="center">
               <q-avatar
@@ -29,7 +21,7 @@
                 size="sm"
                 :color="props.value ? 'green' : 'red'"
                 text-color="white"
-                :icon="props.value? 'check' : 'close'"
+                :icon="props.value ? 'check' : 'close'"
               />
             </q-td>
           </template>
@@ -44,9 +36,11 @@
                 color="accent"
                 @click="onMarkAsAccomplished(props.row)"
               >
-                <q-tooltip>{{ !props.row.accomplishment ? 'Mark as Accomplished' : 'Revert'}}</q-tooltip>
+                <q-tooltip>{{
+                  !props.row.accomplishment ? 'Mark as Accomplished' : 'Revert'
+                }}</q-tooltip>
               </q-btn>
-            
+
               <q-btn
                 dense
                 flat
@@ -72,9 +66,7 @@
           </template>
         </q-table>
 
-        <div v-else class="text-grey text-center q-pa-md">
-          No initiatives found.
-        </div>
+        <div v-else class="text-grey text-center q-pa-md">No initiatives found.</div>
       </q-card-section>
 
       <q-card-actions align="right">
@@ -82,17 +74,11 @@
       </q-card-actions>
     </q-card>
 
-    <DeleteConfirmDialog
-      v-model="showDeleteDialog"
-      @confirmDelete="confirmDelete"
-    >
+    <DeleteConfirmDialog v-model="showDeleteDialog" @confirmDelete="confirmDelete">
       Are you sure you want to delete this initiative?
     </DeleteConfirmDialog>
 
-    <RevertConfirmDialog
-      v-model="showRevertDialog"
-      @confirmRevert="confirmRevert"
-    >
+    <RevertConfirmDialog v-model="showRevertDialog" @confirmRevert="confirmRevert">
       Are you sure you want to revert this accomplishment?
     </RevertConfirmDialog>
   </q-dialog>
@@ -100,33 +86,72 @@
 
 <script setup>
 import { ref } from 'vue'
-import { api } from 'boot/axios'
 import DeleteConfirmDialog from 'src/components/DeleteConfirmDialog.vue'
 import RevertConfirmDialog from 'src/components/RevertConfirmDialog.vue'
 // import { isTrue } from 'src/utils/isTrue';
 
 defineProps({
   modelValue: Boolean,
-  indicator: { type: Object, default: () => {} },
+  indicator: { type: Object, default: () => ({}) },
   initiatives: { type: Array, default: () => [] },
 })
 
-const emit = defineEmits([
-  'update:modelValue',
-  'edit',
-  'deleted',
-  'accomplished',
-  'reverted',
-])
+const emit = defineEmits(['update:modelValue', 'edit', 'deleted', 'accomplished', 'reverted'])
 
 const columns = ref([
-  { name: 'initiative', required: true, label: 'Initiative', align: 'left', field: row => row.description, format: val => `${val}`, sortable: true, style: 'width: 30%;', classes: 'wrap-cell' },
-  { name: 'unit', required: true, label: 'Unit', align: 'center', field: row => row.unit?.short_code, format: val => `${val}`, sortable: false },
-  { name: 'target_date', align: 'center', label: 'Target Date', field: row => row.target_date, format: val => `${val}`, sortable: false },
-  { name: 'actual_value', align: 'center', label: 'Actual Value', field: row => row.value, format: val => `${val}`, sortable: false },
-  { name: 'is_accomplished', align: 'center', label: 'Status', field: row => row.is_accomplished, sortable: false },
-  { name: 'reporting_period', align: 'center', label: 'Reporting Period', field: row => formatReportingPeriod(row.accomplishment), sortable: false, style: 'width: 25%;', classes: 'wrap-cell' },
-  { name: 'actions', label: 'Actions', align: 'center', sortable: false},
+  {
+    name: 'initiative',
+    required: true,
+    label: 'Initiative',
+    align: 'left',
+    field: (row) => row.description,
+    format: (val) => `${val}`,
+    sortable: true,
+    classes: 'wrap-cell initiative-col',
+    headerClasses: 'initiative-col',
+  },
+  {
+    name: 'unit',
+    required: true,
+    label: 'Unit',
+    align: 'center',
+    field: (row) => row.unit?.short_code,
+    format: (val) => `${val}`,
+    sortable: false,
+  },
+  {
+    name: 'target_date',
+    align: 'center',
+    label: 'Target Date',
+    field: (row) => row.target_date,
+    format: (val) => `${val}`,
+    sortable: false,
+  },
+  {
+    name: 'actual_value',
+    align: 'center',
+    label: 'Actual Value',
+    field: (row) => row.value,
+    format: (val) => `${val}`,
+    sortable: false,
+  },
+  {
+    name: 'is_accomplished',
+    align: 'center',
+    label: 'Status',
+    field: (row) => row.is_accomplished,
+    sortable: false,
+  },
+  {
+    name: 'reporting_period',
+    align: 'center',
+    label: 'Reporting Period',
+    field: (row) => formatReportingPeriod(row.accomplishment),
+    sortable: false,
+    classes: 'wrap-cell reporting-period-col',
+    headerClasses: 'reporting-period-col',
+  },
+  { name: 'actions', label: 'Actions', align: 'center', sortable: false },
 ])
 
 const formatReportingPeriod = (row) => {
@@ -137,15 +162,15 @@ const formatReportingPeriod = (row) => {
 }
 
 const updateDialog = (val) => {
-  emit("update:modelValue", val)
+  emit('update:modelValue', val)
 }
 
 const close = () => {
-  emit("update:modelValue", false)
+  emit('update:modelValue', false)
 }
 
 // Edit
-const editInitiative = row => {
+const editInitiative = (row) => {
   emit('edit', row)
 }
 
@@ -160,7 +185,7 @@ const onDeleteClick = (row) => {
 }
 
 // Mark as accomplished
-const onMarkAsAccomplished = async(row) => {
+const onMarkAsAccomplished = async (row) => {
   // Mark as Accomplished
   if (!row.accomplishment) {
     emit('accomplished', row)
@@ -177,30 +202,14 @@ const onMarkAsAccomplished = async(row) => {
 }
 
 const confirmDelete = async () => {
-  try {
-    await api.delete(`/pme/initiatives/${selectedInitiative.value.id}/`)
-    showDeleteDialog.value = false
-    emit('deleted', selectedInitiative.value)
-  } catch {
-    // 
-  }
+  showDeleteDialog.value = false
+  emit('deleted', selectedInitiative.value)
 }
 
 const confirmRevert = async () => {
-  try {
-    const row = selectedInitiative.value
-    if (!row) return
+  if (!selectedInitiative.value) return
 
-    await api.delete(`/pme/initiatives/${selectedInitiative.value.id}/accomplishments/`)
-
-    showRevertDialog.value = false
-    row.accomplishment = null
-    row.is_accomplished = false
-    row.reporting_period_detail = null
-
-    emit('reverted', selectedInitiative.value)
-  } catch {
-    // 
-  }
+  showRevertDialog.value = false
+  emit('reverted', selectedInitiative.value)
 }
 </script>

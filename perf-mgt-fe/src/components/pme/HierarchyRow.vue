@@ -42,15 +42,12 @@
       :level="level + 1"
       :document-id="documentId"
       :document="document"
+      @open-initiatives="$emit('open-initiatives', $event)"
     />
   </template>
 </template>
 
 <script setup>
-import { usePmeStore } from 'src/stores/pme';
-
-const pmeStore = usePmeStore();
-
 const props = defineProps({
   item: { type: Object, required: true },
   level: { type: Number, default: 0 },
@@ -58,9 +55,11 @@ const props = defineProps({
   document: { type: Object, required: true }
 })
 
+const emit = defineEmits(['open-initiatives'])
+
 const handleClick = () => {
   if (props.item.target) {
-    pmeStore.openInitiatives(props.item);
+    emit('open-initiatives', props.item);
   }
 }
 </script>

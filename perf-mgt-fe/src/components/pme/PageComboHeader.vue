@@ -18,7 +18,7 @@
 
       <!-- BUTTONS -->
       <div class="flex items-center">
-        <q-btn class="q-mr-sm" icon="add" :label=" $q.screen.lt.sm ? '' : 'Add New Initiative'" color="primary" @click="pmeStore.onAddInitiative" />
+        <q-btn class="q-mr-sm" icon="add" :label=" $q.screen.lt.sm ? '' : 'Add New Initiative'" color="primary" @click="$emit('add-initiative')" />
         <PageFilter @apply="forwardFilter" />
       </div>
     </div>
@@ -29,11 +29,8 @@
 
 <script setup>
 import PageFilter from 'src/components/pme/PageFilter.vue';
-import { usePmeStore } from 'src/stores/pme';
 
-const pmeStore = usePmeStore();
-
-const emit = defineEmits(['apply'])
+const emit = defineEmits(['apply', 'add-initiative'])
 
 // Forward filter to parent (PME)
 function forwardFilter(filters) {

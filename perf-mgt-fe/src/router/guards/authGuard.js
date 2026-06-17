@@ -5,7 +5,6 @@ export async function authGuard(to, from, next) {
 
   // Check for existing session
   if (!auth.sessionChecked) {
-    auth.sessionChecked = true
     await auth.checkSession()
   }
 

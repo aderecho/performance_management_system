@@ -1,59 +1,79 @@
 <template>
   <q-dialog :model-value="modelValue" @update:model-value="close">
-    <q-card class="q-pa-sm" style="width: 500px; max-width: 90vw">
-
+    <q-card class="q-pa-sm dialog-md">
       <q-card-section class="text-h6">
         {{ isEdit ? 'Edit Initiative' : 'Add Initiative' }}
       </q-card-section>
 
       <q-form @submit.prevent="onSubmit">
         <q-card-section class="q-gutter-xs">
-
           <!-- Indicator -->
-          <q-select v-model="item" :options="itemOptions" label="Performance Measure" emit-value map-options dense outlined
-            :error="!!itemError" :error-message="itemError" />
+          <q-select
+            v-model="item"
+            :options="itemOptions"
+            label="Performance Measure"
+            emit-value
+            map-options
+            dense
+            outlined
+            :error="!!itemError"
+            :error-message="itemError"
+          />
 
           <!-- Description -->
-          <q-input v-model="description" label="Description" dense outlined :error="!!descriptionError"
-            :error-message="descriptionError" />
+          <q-input
+            v-model="description"
+            label="Description"
+            dense
+            outlined
+            :error="!!descriptionError"
+            :error-message="descriptionError"
+          />
 
           <div class="row">
-  <div class="col-6 q-pr-sm">
-    <q-input
-      v-model.number="value"
-      type="number"
-      label="Accomplishment Value"
-      dense
-      outlined
-      :error="!!valueError"
-      :error-message="valueError"
-    />
-  </div>
+            <div class="col-6 q-pr-sm">
+              <q-input
+                v-model.number="value"
+                type="number"
+                label="Accomplishment Value"
+                dense
+                outlined
+                :error="!!valueError"
+                :error-message="valueError"
+              />
+            </div>
 
-  <div class="col-6">
-    <q-input
-      v-model="target_date"
-      label="Target Date"
-      dense
-      outlined
-      :error="!!targetDateError"
-      :error-message="targetDateError"
-    >
-      <template #append>
-        <q-icon name="event" class="cursor-pointer">
-          <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-            <q-date v-model="target_date" mask="YYYY-MM-DD" />
-          </q-popup-proxy>
-        </q-icon>
-      </template>
-    </q-input>
-  </div>
-</div>
+            <div class="col-6">
+              <q-input
+                v-model="target_date"
+                label="Target Date"
+                dense
+                outlined
+                :error="!!targetDateError"
+                :error-message="targetDateError"
+              >
+                <template #append>
+                  <q-icon name="event" class="cursor-pointer">
+                    <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                      <q-date v-model="target_date" mask="YYYY-MM-DD" />
+                    </q-popup-proxy>
+                  </q-icon>
+                </template>
+              </q-input>
+            </div>
+          </div>
 
           <!-- Remarks -->
-          <q-input v-model="remarks" type="textarea" label="Remarks" dense outlined :error="!!remarksError"
-            :error-message="remarksError" class="q-pb-none" />
-
+          <q-input
+            v-model="remarks"
+            type="textarea"
+            label="Remarks"
+            dense
+            outlined
+            :error="!!remarksError"
+            :error-message="remarksError"
+            class="q-pb-none"
+          />
         </q-card-section>
 
         <q-card-actions align="right" class="q-pr-md">
@@ -61,7 +81,6 @@
           <q-btn type="submit" label="Submit" color="primary" :loading="isSubmitting" />
         </q-card-actions>
       </q-form>
-
     </q-card>
   </q-dialog>
 </template>
@@ -71,7 +90,7 @@ import { computed, watch } from 'vue'
 import { useForm, useField } from 'vee-validate'
 import { toFormValidator } from '@vee-validate/zod'
 import { initiativeSchema } from 'src/validators/initiative.schema'
-import { usePmeStore } from 'src/stores/pme'
+import { useInitiativeStore } from 'src/stores/pme/initiative'
 import { today } from 'src/helpers/date'
 
 const emit = defineEmits(['update:modelValue', 'submitted'])
@@ -84,11 +103,11 @@ const props = defineProps({
   },
   initiative: {
     type: Object,
-    default: null
-  }
+    default: null,
+  },
 })
 
-const pmeStore = usePmeStore()
+const initiativeStore = useInitiativeStore()
 
 // Validation
 const { handleSubmit, resetForm, isSubmitting, setValues } = useForm({
@@ -125,7 +144,7 @@ watch(
       resetForm()
     }
   },
-  { immediate: true }
+  { immediate: true },
 )
 
 const flattenItems = (items, result = []) => {
@@ -137,10 +156,10 @@ const flattenItems = (items, result = []) => {
 }
 
 const itemOptions = computed(() =>
-  flattenItems(props.items).map(i => ({
+  flattenItems(props.items).map((i) => ({
     label: `${i.code} ${i.name}`,
     value: i.id,
-  }))
+  })),
 )
 
 // Submit
@@ -148,11 +167,9 @@ const isEdit = computed(() => !!props.initiative)
 
 const onSubmit = handleSubmit(async (values) => {
   if (isEdit.value) {
-    await pmeStore.updateInitiative(props.initiative.id, values)
-
-    pmeStore.fetchInitiatives(pmeStore.selectedIndicator.id) // Should be indicator_id
+    await initiativeStore.updateInitiative(props.initiative.id, values)
   } else {
-    await pmeStore.createSubmission(values)
+    await initiativeStore.createInitiative(values)
   }
 
   emit('submitted')
