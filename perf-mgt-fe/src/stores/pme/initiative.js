@@ -97,7 +97,15 @@ export const useInitiativeStore = defineStore('initiativeStore', {
       this.error.accomplishment = null
 
       try {
-        const response = await api.post(`/pme/initiatives/${id}/accomplishments/`, payload)
+        let body = payload
+
+        if (payload?.file_path) {
+          body = new FormData()
+          body.append('reporting_period', payload.reporting_period)
+          body.append('file_path', payload.file_path)
+        }
+
+        const response = await api.post(`/pme/initiatives/${id}/accomplishments/`, body)
         notify.positive('Initiative marked as accomplished.')
         return response.data
       } catch (err) {

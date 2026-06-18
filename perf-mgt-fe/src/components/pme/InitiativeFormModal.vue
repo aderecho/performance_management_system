@@ -77,7 +77,7 @@
         </q-card-section>
 
         <q-card-actions align="right" class="q-pr-md">
-          <q-btn label="Cancel" outline color="grey" @click="close(false)" />
+          <q-btn flat label="Cancel" color="grey-7" @click="close(false)" />
           <q-btn type="submit" label="Submit" color="primary" :loading="isSubmitting" />
         </q-card-actions>
       </q-form>
@@ -88,7 +88,7 @@
 <script setup>
 import { computed, watch } from 'vue'
 import { useForm, useField } from 'vee-validate'
-import { toFormValidator } from '@vee-validate/zod'
+import { toTypedSchema } from '@vee-validate/zod'
 import { initiativeSchema } from 'src/validators/initiative.schema'
 import { useInitiativeStore } from 'src/stores/pme/initiative'
 import { today } from 'src/helpers/date'
@@ -111,7 +111,7 @@ const initiativeStore = useInitiativeStore()
 
 // Validation
 const { handleSubmit, resetForm, isSubmitting, setValues } = useForm({
-  validationSchema: toFormValidator(initiativeSchema),
+  validationSchema: toTypedSchema(initiativeSchema),
   initialValues: {
     item: null,
     description: '',

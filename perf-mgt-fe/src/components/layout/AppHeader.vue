@@ -1,6 +1,6 @@
 <template>
-  <q-header elevated class="bg-surface text-primary" height-hint="64">
-    <q-toolbar class="GNL__toolbar">
+  <q-header elevated class="bg-surface text-primary min-h-64 items-center" height-hint="64">
+    <q-toolbar class="GNL__toolbar min-h-64 items-center">
 
       <q-btn
         flat dense round

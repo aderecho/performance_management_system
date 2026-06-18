@@ -1,5 +1,6 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 from rest_framework.views import APIView
@@ -150,6 +151,7 @@ class ReportingPeriodViewSet(viewsets.ModelViewSet):
 class InitiativeViewSet(viewsets.ModelViewSet):
     serializer_class = InitiativeSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
     queryset = Initiative.objects.select_related(
         "item",
         "created_by",
@@ -248,7 +250,11 @@ class InitiativeViewSet(viewsets.ModelViewSet):
         # GET
         if request.method == "GET":
             qs = [initiative.accomplishment] if initiative.accomplishment else []
-            serializer = InitiativeAccomplishmentSerializer(qs, many=True)
+            serializer = InitiativeAccomplishmentSerializer(
+                qs,
+                many=True,
+                context={"request": request},
+            )
             return Response(serializer.data)
 
         # POST
@@ -259,7 +265,10 @@ class InitiativeViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            serializer = InitiativeAccomplishmentSerializer(data=request.data)
+            serializer = InitiativeAccomplishmentSerializer(
+                data=request.data,
+                context={"request": request},
+            )
             serializer.is_valid(raise_exception=True)
             serializer.save(
                 initiative=initiative,

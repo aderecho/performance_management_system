@@ -1,23 +1,8 @@
-<style>
-.hierarchy-table table {
-  table-layout: fixed;
-  width: 100%;
-}
-.hierarchy-table th:first-child,
-.hierarchy-table td:first-child {
-  width: 40%;
-}
-.hierarchy-table td {
-  white-space: normal !important;
-  word-break: break-word !important;
-  overflow-wrap: anywhere !important;
-}
-</style>
 <template>
-  <q-markup-table class="hierarchy-table" v-if="items && items.length">
+  <q-markup-table flat bordered class="hierarchy-table rounded-3xl" v-if="items && items.length">
     <thead>
       <tr id="header">
-        <th class="text-center text-weight-bold" >Performance Measure</th>
+        <th class="text-left text-weight-bold" >Performance Measure</th>
         <th>Target</th>
         <th>Accomplishment</th>
         <th>Percentage</th>

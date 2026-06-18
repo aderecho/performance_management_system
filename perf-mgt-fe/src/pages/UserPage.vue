@@ -2,7 +2,7 @@
     <div class="q-pa-md">
 
         <PageComboHeader title="User Management" :breadcrumbs="[
-            { label: 'Home', to: '/' },
+            { label: 'Home', to: '/dashboard' },
             { label: 'Admin' },
             { label: 'User Management' }
         ]" :buttons="buttons" />

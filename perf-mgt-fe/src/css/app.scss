@@ -198,6 +198,10 @@
   min-height: 294px;
 }
 
+.min-h-64 {
+  min-height: 64px;
+}
+
 // WIDTHS
 
 .min-w-0 {
@@ -242,6 +246,96 @@
 
 .z-1 {
   z-index: 1;
+}
+
+.text-weight-semibold {
+  font-weight: 600;
+}
+
+// PME ACCOMPLISHMENT MODAL
+
+.pme-break-anywhere {
+  overflow-wrap: anywhere;
+}
+
+.pme-accomplishment-dialog {
+  max-width: 94vw;
+  overflow: hidden;
+  width: 620px;
+}
+
+.pme-accomplishment-body {
+  background: #f8fafc;
+  display: grid;
+  gap: 14px;
+}
+
+.pme-accomplishment-panel {
+  border: 1px solid #e6e9ef;
+}
+
+.pme-accomplishment-eyebrow {
+  font-size: 0.72rem;
+}
+
+.pme-accomplishment-meta-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.pme-accomplishment-meta-value {
+  color: #111827;
+  font-size: 0.9rem;
+}
+
+// .pme-accomplishment-period-dot {
+//   background: #fdf2f5;
+//   border-radius: 8px;
+//   color: $primary;
+//   height: 34px;
+//   width: 34px;
+// }
+
+.pme-accomplishment-evidence-panel {
+  border-style: dashed;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.pme-accomplishment-evidence-panel--ready {
+  background: #f7fcfa;
+  border-color: $secondary;
+}
+
+.pme-evidence-dropzone {
+  background: #f8fafc;
+  border: 1px solid #e6e9ef;
+  min-height: 64px;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.pme-evidence-dropzone--ready {
+  background: #f7fcfa;
+  border-color: $secondary;
+}
+
+.pme-accomplishment-actions {
+  border-top: 1px solid #edf0f4;
+}
+
+@media (max-width: 599px) {
+  .pme-accomplishment-meta-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pme-accomplishment-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
 }
 
 // DASHBOARD
@@ -294,4 +388,20 @@
 .progress-gauge-labels {
   margin-top: var(--progress-gauge-label-margin-top);
   max-width: var(--progress-gauge-label-width);
+}
+
+
+// HIERARCHY TABLE
+.hierarchy-table table {
+  table-layout: fixed;
+  width: 100%;
+}
+.hierarchy-table th:first-child,
+.hierarchy-table td:first-child {
+  width: 40%;
+}
+.hierarchy-table td {
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
 }

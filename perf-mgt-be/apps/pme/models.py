@@ -190,7 +190,7 @@ class InitiativeAccomplishment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     initiative = models.OneToOneField(Initiative, on_delete=models.CASCADE, related_name="accomplishment")
     reporting_period = models.ForeignKey(ReportingPeriod, on_delete=models.CASCADE, related_name="submissions", null=True, blank=True)
-    file_path = models.CharField(max_length=500, null=True, blank=True)
+    file_path = models.FileField(upload_to="pme/evidence/", null=True, blank=True)
     submitted_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name="initiative_accomplishments")
 
     created_at = models.DateTimeField(auto_now_add=True)
