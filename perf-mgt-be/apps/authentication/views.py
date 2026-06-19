@@ -2,10 +2,10 @@
 from rest_framework import status
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework import viewsets
+from rest_framework import viewsets, status
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth import authenticate
@@ -13,7 +13,7 @@ from django.http import JsonResponse
 
 from .authentication import CookieJWTAuthentication
 
-from .serializers import UserSerializer
+from .serializers import UserSerializer, UserCreateSerializer
 from .services import UserDashboardService
 
 User = get_user_model()
@@ -150,11 +150,27 @@ class RefreshTokenView(APIView):
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all().prefetch_related(
-        'user_units__unit',
-        'profile'
+        "user_units__unit",
+        "profile"
     )
-    serializer_class = UserSerializer
-    permission_classes = [IsAuthenticated]
+
+    permission_classes = [IsAdminUser]
+
+    def get_serializer_class(self):
+        if self.action == "create":
+            return UserCreateSerializer
+        return UserSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user = serializer.save()
+
+        return Response(
+            UserSerializer(user).data,
+            status=status.HTTP_201_CREATED
+        )
 
 
 

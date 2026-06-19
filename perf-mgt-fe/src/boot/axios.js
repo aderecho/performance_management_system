@@ -39,7 +39,7 @@ export default defineBoot(({ app, router, store }) => {
         return Promise.reject(error)
       }
 
-      if (error.response.status === 401) {
+      if (error.response.status === 401 && !originalRequest._retry) {
         if (isRefreshing) {
 
           return new Promise((resolve, reject) => {

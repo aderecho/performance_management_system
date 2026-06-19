@@ -51,10 +51,10 @@
                   <div class="h-1 bg-gradient-primary-ocean"></div>
 
                   <q-card-section class="q-pa-md">
-                    <div class="text-h3 text-weight-bold text-dark">
+                    <div class="text-3xl text-weight-bold text-dark">
                       {{ metric.value }}
                     </div>
-                    <div class="text-caption text-blue-grey-8 q-mt-sm">
+                    <div class="text-caption text-grey-8 q-mt-sm">
                       {{ metric.label }}
                     </div>
                   </q-card-section>

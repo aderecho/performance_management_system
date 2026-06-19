@@ -59,7 +59,7 @@
 
           <q-card-section class="text-center q-pt-none q-mt-md">
             <q-btn outline class="full-width" @click="onClickSso()">
-              <q-img class="q-mr-sm w-16 h-16" alt="Quasar logo" src="~assets/google/16.svg" />
+              <q-img class="q-mr-sm" alt="Quasar logo" src="~assets/google/16.svg" />
               <div>Sign in using UP Mail</div>
             </q-btn>
           </q-card-section>
