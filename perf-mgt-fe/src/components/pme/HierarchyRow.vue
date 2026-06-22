@@ -10,12 +10,12 @@
     :class="[{ 'cursor-pointer': item.target }, 'hover:bg-grey-2']"
     @click="handleClick"
   >
-    <td class="wrap-cell">
+    <td class="wrap-cell text-grey-8">
       <span>{{ item.code }} {{ item.name }}</span>
     </td>
 
     <template v-if="item.target">
-      <td class="text-center">
+      <td class="text-center text-grey-8">
         <span v-if="item.target">
           {{ item.target }}
           <span v-if="item.unit_of_measure">
@@ -23,7 +23,7 @@
           </span>
         </span>
       </td>
-      <td class="text-center">{{ item.total_accomplishment }}</td>
+      <td class="text-center text-grey-8">{{ item.total_accomplishment }}</td>
       <td class="text-center">
           <q-chip v-if="item.percent_achieved>=100" outline color="green" :label="item.percent_achieved" />
           <q-chip v-if="item.percent_achieved<100" outline color="red" :label="item.percent_achieved" />

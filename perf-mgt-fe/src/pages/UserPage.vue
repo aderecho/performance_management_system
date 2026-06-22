@@ -2,7 +2,7 @@
     <div class="q-pa-md">
 
         <PageComboHeader title="User Management" :breadcrumbs="[
-            { label: 'Home', to: '/' },
+            { label: 'Home', to: '/dashboard' },
             { label: 'Admin' },
             { label: 'User Management' }
         ]" :buttons="buttons" />
@@ -73,7 +73,6 @@ function handleView(row) {
 
 const userFields = [
     { label: 'Email', key: 'email' },
-
     {
         label: 'Full Name',
         key: 'profile',
@@ -137,6 +136,7 @@ async function handleSubmit(formData) {
     try {
         const payload = {
             email: formData.email,
+            password: formData.password,
             is_active: formData.is_active,
             is_superuser: formData.is_superuser,
 
@@ -162,6 +162,7 @@ async function handleSubmit(formData) {
 
     } catch (err) {
         console.error('Create user failed:', err)
+        console.log('Form submitted:', formData)
     }
 }
 

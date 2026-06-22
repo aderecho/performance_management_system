@@ -9,5 +9,6 @@ urlpatterns = [
     path('refresh/', RefreshTokenView.as_view(), name='refresh'),
     path('session/', SessionCheckView.as_view(), name='session'),
     path('users/', UserViewSet.as_view({'get': 'list'}), name='user-list'),
+    path('users/create/', UserViewSet.as_view({'post': 'create'}), name='user-create'),
     path('users/stats/', UserDashboardStatsView.as_view(), name='user-dashboard-stats'),
 ]

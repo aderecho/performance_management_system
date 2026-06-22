@@ -1,15 +1,17 @@
 <template>
   <q-dialog :model-value="modelValue" @update:model-value="updateDialog">
-    <q-card class="dialog-lg">
+    <q-card class="dialog-lg initiative-list-dialog rounded-borders">
       <q-card-section class="q-mb-none">
         <div class="text-h6">Initiatives</div>
-        <div class="text-caption text-grey">{{ indicator?.code }} {{ indicator?.name }}</div>
+        <div class="text-caption text-grey-8">{{ indicator?.code }} {{ indicator?.name }}</div>
       </q-card-section>
 
       <q-card-section>
         <q-table
           v-if="initiatives && initiatives.length"
+          flat bordered
           class="q-pa-none q-ma-none wrap-table"
+          table-header-class="bg-surface text-white"
           :rows="initiatives"
           :columns="columns"
           row-key="id"
@@ -18,11 +20,35 @@
             <q-td align="center">
               <q-avatar
                 outline
-                size="sm"
+                size="xs"
                 :color="props.value ? 'green' : 'red'"
                 text-color="white"
-                :icon="props.value ? 'check' : 'close'"
-              />
+              >
+                <Check v-if="props.value" :size="12" :stroke-width="5" />
+                <X v-else :size="12" :stroke-width="3" />
+              </q-avatar>
+            </q-td>
+          </template>
+
+          <template #body-cell-evidence="props">
+            <q-td align="center">
+              <q-btn
+                v-if="props.row.accomplishment?.file_url"
+                dense
+                flat
+                round
+                color="primary"
+                type="a"
+                :href="props.row.accomplishment.file_url"
+                target="_blank"
+              >
+                <FileCheck2 :size="18" :stroke-width="2" />
+                <q-tooltip>
+                  {{ props.row.accomplishment.file_name || 'View evidence' }}
+                </q-tooltip>
+              </q-btn>
+
+              <span v-else class="text-grey-6">---</span>
             </q-td>
           </template>
 
@@ -32,10 +58,11 @@
                 dense
                 flat
                 round
-                :icon="!props.row.accomplishment ? 'task_alt' : 'cancel'"
-                color="accent"
+                color="amber"
                 @click="onMarkAsAccomplished(props.row)"
               >
+                <FileCheck2 v-if="!props.row.accomplishment" :size="18" :stroke-width="2" />
+                <RotateCcw v-else :size="22" :stroke-width="2" />
                 <q-tooltip>{{
                   !props.row.accomplishment ? 'Mark as Accomplished' : 'Revert'
                 }}</q-tooltip>
@@ -45,10 +72,10 @@
                 dense
                 flat
                 round
-                icon="edit"
                 color="secondary"
                 @click="editInitiative(props.row)"
               >
+                <SquarePen :size="18" :stroke-width="2" />
                 <q-tooltip>Edit</q-tooltip>
               </q-btn>
 
@@ -56,10 +83,10 @@
                 dense
                 flat
                 round
-                icon="delete"
                 color="negative"
                 @click="onDeleteClick(props.row)"
               >
+                <Trash2 :size="18" :stroke-width="2" />
                 <q-tooltip>Delete</q-tooltip>
               </q-btn>
             </q-td>
@@ -88,7 +115,7 @@
 import { ref } from 'vue'
 import DeleteConfirmDialog from 'src/components/DeleteConfirmDialog.vue'
 import RevertConfirmDialog from 'src/components/RevertConfirmDialog.vue'
-// import { isTrue } from 'src/utils/isTrue';
+import { Check, FileCheck2, RotateCcw, SquarePen, Trash2, X } from 'lucide-vue-next'
 
 defineProps({
   modelValue: Boolean,
@@ -150,6 +177,13 @@ const columns = ref([
     sortable: false,
     classes: 'wrap-cell reporting-period-col',
     headerClasses: 'reporting-period-col',
+  },
+  {
+    name: 'evidence',
+    align: 'center',
+    label: 'Evidence',
+    field: (row) => row.accomplishment?.file_url,
+    sortable: false,
   },
   { name: 'actions', label: 'Actions', align: 'center', sortable: false },
 ])
@@ -213,3 +247,10 @@ const confirmRevert = async () => {
   emit('reverted', selectedInitiative.value)
 }
 </script>
+
+<style scoped>
+.initiative-list-dialog {
+  max-width: 95vw;
+  width: 1100px;
+}
+</style>

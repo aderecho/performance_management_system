@@ -1,38 +1,14 @@
 <template>
     <q-drawer :model-value="modelValue" @update:model-value="$emit('update:modelValue', $event)" show-if-above bordered
-        class="text-primary" :width="280">
-        <q-scroll-area class="fit">
-            <q-list class="text-primary q-pt-sm">
-                <q-item clickable to="/dashboard">
-                    <q-item-section avatar>
-                        <q-icon name="dashboard" />
-                    </q-item-section>
-                    <q-item-section>
-                        <q-item-label>Dashboard</q-item-label>
-                    </q-item-section>
-                </q-item>
-            </q-list>
-
-            <q-separator v-if="configStore.templateList?.length" inset class="q-my-sm" />
-
-            <q-list class="text-primary">
-                <q-expansion-item v-for="template in configStore.templateList" :key="template.id" icon="description"
-                    :label="template.name" dense-toggle>
-                    <q-item v-for="document in template.documents" :key="document.id" clickable
-                        :to="documentRoute(document.id)">
-                        <q-item-section>
-                            <q-item-label>{{ document.name }}</q-item-label>
-                        </q-item-section>
-                    </q-item>
-                </q-expansion-item>
-
-                <q-separator v-if="configStore.templateList?.length" inset class="q-my-sm" />
-
-                <!-- Admin links -->
+        class="text-dark column no-wrap" :width="300">
+        <q-scroll-area class="col">
+            <q-list class="text-dark q-pa-md q-gutter-y-sm">
+                <!-- ADMIN LINKS-->
                 <div v-if="authStore.isSuperAdmin">
-                    <q-item v-for="link in adminLinks" :key="link.text" clickable :to="link.to">
+                    <q-item v-for="link in links" :key="link.text" clickable :to="link.to" class="rounded"
+                        active-class="bg-grey text-primary">
                         <q-item-section avatar>
-                            <q-icon :name="link.icon" />
+                            <component :is="link.icon" :size="22" :stroke-width="2" />
                         </q-item-section>
                         <q-item-section>
                             <q-item-label>{{ link.text }}</q-item-label>
@@ -40,21 +16,40 @@
                     </q-item>
                 </div>
 
-                <!-- Footer -->
-                <div class="q-mt-md">
-                    <div class="flex flex-center q-gutter-xs">
-                        <a class="text-primary" href="https://privacy.up.edu.ph" target="_blank">
-                            Privacy Policy
-                        </a>
-                        <span> · </span>
-                        <a class="text-primary" href="javascript:void(0)">
-                            About the App
-                        </a>
-                    </div>
-                </div>
+                <q-separator v-if="configStore.templateList?.length" inset class="q-my-sm" />
 
+                <!-- DOCUMENTS -->
+                <q-expansion-item v-for="template in configStore.templateList" :key="template.id" dense-toggle>
+                    <template #header>
+                        <q-item-section avatar>
+                            <ScrollText :size="22" :stroke-width="2" />
+                        </q-item-section>
+                        <q-item-section>
+                            <q-item-label>{{ template.name }}</q-item-label>
+                        </q-item-section>
+                    </template>
+                    <q-item v-for="document in template.documents" :key="document.id" clickable
+                        :to="documentRoute(document.id)">
+                        <q-item-section>
+                            <q-item-label>{{ document.name }}</q-item-label>
+                        </q-item-section>
+                    </q-item>
+                </q-expansion-item>
             </q-list>
         </q-scroll-area>
+
+        <!-- Footer -->
+        <div class="q-pa-md">
+            <div class="flex flex-center q-gutter-xs">
+                <a class="text-primary" href="https://privacy.up.edu.ph" target="_blank">
+                    Privacy Policy
+                </a>
+                <span> · </span>
+                <a class="text-primary" href="javascript:void(0)">
+                    About the App
+                </a>
+            </div>
+        </div>
     </q-drawer>
 </template>
 
@@ -63,6 +58,7 @@ import { onMounted } from 'vue'
 import { useConfigStore } from 'src/stores/config'
 import { documentRoute } from 'src/router/routeHelpers'
 import { useAuthStore } from 'src/stores/auth'
+import { Gauge, UsersRound, ShieldUser, FileClock, KeyRound, ScrollText } from 'lucide-vue-next'
 
 const authStore = useAuthStore()
 
@@ -77,11 +73,12 @@ defineEmits(['update:modelValue'])
 
 const configStore = useConfigStore()
 
-const adminLinks = [
-    { icon: 'person', text: 'User Management', to: '/admin/users' },
-    { icon: 'groups', text: 'Role Management', to: '/admin/roles' },
-    { icon: 'admin_panel_settings', text: 'Permission Management', to: '/admin/permissions' },
-    { icon: 'list', text: 'Audit Logs', to: '/admin/audit-logs' },
+const links = [
+    { icon: Gauge, text: 'Dashboard', to: '/dashboard' },
+    { icon: UsersRound, text: 'User Management', to: '/admin/users' },
+    { icon: ShieldUser, text: 'Role Management', to: '/admin/roles' },
+    { icon: KeyRound, text: 'Permission Management', to: '/admin/permissions' },
+    { icon: FileClock, text: 'Audit Logs', to: '/admin/audit-logs' },
 ]
 
 onMounted(async () => {

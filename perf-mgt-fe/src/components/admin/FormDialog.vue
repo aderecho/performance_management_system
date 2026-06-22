@@ -26,6 +26,18 @@
               />
             </div>
 
+            <div class="col-12">
+              <q-input
+                v-model="form.password"
+                label="Password"
+                type="password"
+                dense
+                outlined
+                :rules="[(val) => !!val || 'Required']"
+                hide-bottom-space
+              />
+            </div>
+
             <div class="col-12 col-sm-6">
               <q-input
                 v-model="form.profile.first_name"
@@ -154,6 +166,7 @@ const isEdit = computed(() => !!props.data)
 // Form State
 const form = reactive({
   email: '',
+  password: '',
   is_active: true,
   is_superuser: false,
   profile: {
@@ -196,6 +209,7 @@ watch(
   (val) => {
     if (val) {
       form.email = val.email || ''
+      form.password = val.password || ''
       form.is_active = val.is_active ?? false
       form.is_superuser = val.is_superuser ?? false
 
@@ -227,7 +241,8 @@ watch(
 // Reset
 function resetForm() {
   form.email = ''
-  form.is_active = false
+  form.password = ''
+  form.is_active = true
   form.is_superuser = false
   form.profile.first_name = ''
   form.profile.middle_name = ''

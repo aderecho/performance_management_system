@@ -18,12 +18,12 @@ export const useUserStore = defineStore('userStore', {
     }),
     getters: {},
     actions: {
-        async fetchUsers() {
+        async fetchUsers(payload) {
             this.loading.list = true
             this.error.list = null
 
             try {
-                const response = await api.get('/auth/users/')
+                const response = await api.get('/auth/users/', payload)
                 this.users = response.data
                 return response.data
             } catch (err) {
@@ -39,7 +39,7 @@ export const useUserStore = defineStore('userStore', {
             this.error.save = null
 
             try {
-                const response = await api.post('/auth/users/', payload)
+                const response = await api.post('/auth/users/create/', payload)
 
                 this.users.push(response.data)
 
