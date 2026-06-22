@@ -1,10 +1,12 @@
 import { defineStore, acceptHMRUpdate } from 'pinia'
 import { api } from 'boot/axios'
-import { notify } from 'src/utils/notify'
+
+let fetchInitiativesRequestKey = 0
 
 export const useInitiativeStore = defineStore('initiativeStore', {
   state: () => ({
-    initiatives: [],
+    initiativesByIndicator: {},
+    currentIndicatorId: null,
     loading: {
       list: false,
       save: false,
@@ -16,27 +18,72 @@ export const useInitiativeStore = defineStore('initiativeStore', {
       save: null,
       delete: null,
       accomplishment: null,
-    }
+    },
   }),
 
+  getters: {
+    initiatives: (state) => {
+      if (!state.currentIndicatorId) return []
+
+      return state.initiativesByIndicator[state.currentIndicatorId] || []
+    },
+  },
+
   actions: {
+    resetInitiatives() {
+      fetchInitiativesRequestKey += 1
+      this.initiativesByIndicator = {}
+      this.currentIndicatorId = null
+      this.loading = {
+        list: false,
+        save: false,
+        delete: false,
+        accomplishment: false,
+      }
+      this.error = {
+        list: null,
+        save: null,
+        delete: null,
+        accomplishment: null,
+      }
+    },
+
     async fetchInitiatives(indicatorId, params = {}) {
+      const requestKey = ++fetchInitiativesRequestKey
       this.loading.list = true
       this.error.list = null
 
       try {
         const response = await api.get(`/pme/items/${indicatorId}/initiatives/`, { params })
-        this.initiatives = response.data
+
+        if (requestKey !== fetchInitiativesRequestKey) {
+          return response.data
+        }
+
+        this.currentIndicatorId = indicatorId
+        this.initiativesByIndicator = {
+          ...this.initiativesByIndicator,
+          [indicatorId]: response.data,
+        }
+
         return response.data
       } catch (err) {
+        if (requestKey !== fetchInitiativesRequestKey) {
+          return []
+        }
+
         this.error.list = err.response?.data || err.message
-        this.initiatives = []
-        notify.negative(
-          `Failed to load initiatives. ${err.response?.data?.message || 'Please try again.'}`,
-        )
+        this.currentIndicatorId = indicatorId
+        this.initiativesByIndicator = {
+          ...this.initiativesByIndicator,
+          [indicatorId]: [],
+        }
+
         throw err
       } finally {
-        this.loading.list = false
+        if (requestKey === fetchInitiativesRequestKey) {
+          this.loading.list = false
+        }
       }
     },
 
@@ -46,11 +93,18 @@ export const useInitiativeStore = defineStore('initiativeStore', {
 
       try {
         const response = await api.post('/pme/initiatives/', payload)
-        notify.positive('Initiative submitted successfully.')
+        const indicatorId = response.data.item ?? payload.item
+
+        if (indicatorId && this.initiativesByIndicator[indicatorId]) {
+          this.initiativesByIndicator = {
+            ...this.initiativesByIndicator,
+            [indicatorId]: [...this.initiativesByIndicator[indicatorId], response.data],
+          }
+        }
+
         return response.data
       } catch (err) {
         this.error.save = err.response?.data || err.message
-        notify.negative(`Failed to submit initiative. ${err.response?.data || 'Please try again.'}`)
         throw err
       } finally {
         this.loading.save = false
@@ -63,11 +117,10 @@ export const useInitiativeStore = defineStore('initiativeStore', {
 
       try {
         const response = await api.put(`/pme/initiatives/${id}/`, payload)
-        notify.positive('Initiative updated successfully.')
+        this.replaceCachedInitiative(id, response.data)
         return response.data
       } catch (err) {
         this.error.save = err.response?.data || err.message
-        notify.negative(`Failed to update initiative. ${err.response?.data || 'Please try again.'}`)
         throw err
       } finally {
         this.loading.save = false
@@ -80,12 +133,10 @@ export const useInitiativeStore = defineStore('initiativeStore', {
 
       try {
         await api.delete(`/pme/initiatives/${id}/`)
-        this.initiatives = this.initiatives.filter((initiative) => initiative.id !== id)
-        notify.positive('Initiative removed successfully.')
+        this.removeCachedInitiative(id)
         return true
       } catch (err) {
         this.error.delete = err.response?.data || err.message
-        notify.negative(`Failed to delete initiative. ${err.response?.data || 'Please try again.'}`)
         throw err
       } finally {
         this.loading.delete = false
@@ -106,13 +157,9 @@ export const useInitiativeStore = defineStore('initiativeStore', {
         }
 
         const response = await api.post(`/pme/initiatives/${id}/accomplishments/`, body)
-        notify.positive('Initiative marked as accomplished.')
         return response.data
       } catch (err) {
         this.error.accomplishment = err.response?.data || err.message
-        notify.negative(
-          `Failed to mark initiative as accomplished. ${err.response?.data || 'Please try again.'}`,
-        )
         throw err
       } finally {
         this.loading.accomplishment = false
@@ -125,17 +172,33 @@ export const useInitiativeStore = defineStore('initiativeStore', {
 
       try {
         await api.delete(`/pme/initiatives/${id}/accomplishments/`)
-        notify.positive('Accomplishment reverted successfully.')
         return true
       } catch (err) {
         this.error.accomplishment = err.response?.data || err.message
-        notify.negative(
-          `Failed to revert accomplishment. ${err.response?.data || 'Please try again.'}`,
-        )
         throw err
       } finally {
         this.loading.accomplishment = false
       }
+    },
+
+    replaceCachedInitiative(id, nextInitiative) {
+      if (!nextInitiative?.id) return
+
+      this.initiativesByIndicator = Object.fromEntries(
+        Object.entries(this.initiativesByIndicator).map(([indicatorId, initiatives]) => [
+          indicatorId,
+          initiatives.map((initiative) => (initiative.id === id ? nextInitiative : initiative)),
+        ]),
+      )
+    },
+
+    removeCachedInitiative(id) {
+      this.initiativesByIndicator = Object.fromEntries(
+        Object.entries(this.initiativesByIndicator).map(([indicatorId, initiatives]) => [
+          indicatorId,
+          initiatives.filter((initiative) => initiative.id !== id),
+        ]),
+      )
     },
   },
 })

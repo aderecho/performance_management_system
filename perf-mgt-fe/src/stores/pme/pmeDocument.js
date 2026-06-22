@@ -1,6 +1,8 @@
 import { defineStore, acceptHMRUpdate } from 'pinia'
 import { api } from 'boot/axios'
-import { notify } from 'src/utils/notify'
+
+let fetchDocumentRequestKey = 0
+let fetchReportingPeriodsRequestKey = 0
 
 export const usePmeDocumentStore = defineStore('pmeDocumentStore', {
   state: () => ({
@@ -19,13 +21,29 @@ export const usePmeDocumentStore = defineStore('pmeDocumentStore', {
       document: null,
       reportingPeriods: null,
       filterItems: null,
-    }
+    },
   }),
 
   actions: {
-    clearDocumentState() {
+    resetState() {
+      fetchDocumentRequestKey += 1
+      fetchReportingPeriodsRequestKey += 1
       this.documentWithItems = {}
       this.reportingPeriods = []
+      this.filters = {
+        item: null,
+        show_all: false,
+      }
+      this.loading = {
+        document: false,
+        reportingPeriods: false,
+        filterItems: false,
+      }
+      this.error = {
+        document: null,
+        reportingPeriods: null,
+        filterItems: null,
+      }
     },
 
     setFilters(newFilters) {
@@ -33,6 +51,7 @@ export const usePmeDocumentStore = defineStore('pmeDocumentStore', {
     },
 
     async fetchDocument(documentId) {
+      const requestKey = ++fetchDocumentRequestKey
       this.loading.document = true
       this.error.document = null
 
@@ -44,20 +63,28 @@ export const usePmeDocumentStore = defineStore('pmeDocumentStore', {
           },
         })
 
+        if (requestKey !== fetchDocumentRequestKey) {
+          return response.data
+        }
+
         this.documentWithItems = response.data
         return response.data
       } catch (err) {
+        if (requestKey !== fetchDocumentRequestKey) {
+          return null
+        }
+
         this.error.document = err.response?.data || err.message
-        notify.negative(
-          `Failed to load document. ${err.response?.data?.message || 'Please try again.'}`,
-        )
         throw err
       } finally {
-        this.loading.document = false
+        if (requestKey === fetchDocumentRequestKey) {
+          this.loading.document = false
+        }
       }
     },
 
     async fetchReportingPeriods(documentId) {
+      const requestKey = ++fetchReportingPeriodsRequestKey
       this.loading.reportingPeriods = true
       this.error.reportingPeriods = null
 
@@ -66,6 +93,10 @@ export const usePmeDocumentStore = defineStore('pmeDocumentStore', {
           params: { document: documentId },
         })
 
+        if (requestKey !== fetchReportingPeriodsRequestKey) {
+          return []
+        }
+
         this.reportingPeriods = res.data.map((rp) => ({
           id: rp.id,
           label: `Period ${rp.period_number} (${rp.start_date} to ${rp.end_date})`,
@@ -73,13 +104,16 @@ export const usePmeDocumentStore = defineStore('pmeDocumentStore', {
 
         return this.reportingPeriods
       } catch (err) {
+        if (requestKey !== fetchReportingPeriodsRequestKey) {
+          return []
+        }
+
         this.error.reportingPeriods = err.response?.data || err.message
-        notify.negative(
-          `Failed to load reporting periods. ${err.response?.data?.message || 'Please try again.'}`,
-        )
         throw err
       } finally {
-        this.loading.reportingPeriods = false
+        if (requestKey === fetchReportingPeriodsRequestKey) {
+          this.loading.reportingPeriods = false
+        }
       }
     },
 
@@ -98,9 +132,6 @@ export const usePmeDocumentStore = defineStore('pmeDocumentStore', {
         return response.data
       } catch (err) {
         this.error.filterItems = err.response?.data || err.message
-        notify.negative(
-          `Failed to load filter items. ${err.response?.data?.message || 'Please try again.'}`,
-        )
         throw err
       } finally {
         this.loading.filterItems = false

@@ -31,7 +31,7 @@
         </div>
 
         <AppTable title="List of Users" :rows="userStore.users" :columns="columns" row-key="email"
-            title-font-size="15px" search-width="400px" table-header-class="bg-surface text-white"
+            title-font-size="15px" search-width="500px" table-header-class="bg-surface text-white"
             @view="handleView" @edit="handleEdit" @delete="handleDelete" />
 
         <ViewDialog v-model="showViewDialog" title="User Details" :data="selectedUser" :fields="userFields" />
@@ -49,6 +49,7 @@ import FormDialog from 'src/components/admin/FormDialog.vue'
 import AppTable from 'src/components/admin/MarkupTable.vue'
 import { useUserStore } from 'src/stores/user'
 import { Users, UserCheck, UserPlus } from 'lucide-vue-next'
+import { notify } from 'src/utils/notify'
 
 const userStore = useUserStore()
 const showViewDialog = ref(false)
@@ -155,6 +156,7 @@ async function handleSubmit(formData) {
         }
 
         await userStore.createUser(payload)
+        notify.positive('User created successfully.')
 
         showFormDialog.value = false
 
@@ -163,6 +165,7 @@ async function handleSubmit(formData) {
     } catch (err) {
         console.error('Create user failed:', err)
         console.log('Form submitted:', formData)
+        notify.negative('Failed to create user. Please try again.')
     }
 }
 
@@ -187,13 +190,13 @@ onMounted(async () => {
     try {
         await userStore.fetchUsers()
     } catch {
-        // Store captures the error state.
+        notify.negative('Failed to load users. Please try again.')
     }
 
     try {
         await userStore.fetchUserStats()
     } catch {
-        // Store captures the error state.
+        notify.negative('Failed to load user stats. Please try again.')
     }
 })
 </script>

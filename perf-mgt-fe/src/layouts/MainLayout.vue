@@ -23,16 +23,3 @@ function toggleLeftDrawer () {
   leftDrawerOpen.value = !leftDrawerOpen.value
 }
 </script>
-
-<style scoped>
-.main-layout {
-  height: 100vh;
-  overflow: hidden;
-}
-
-.main-router-view {
-  height: 100vh;
-  overflow-x: hidden;
-  overflow-y: auto;
-}
-</style>

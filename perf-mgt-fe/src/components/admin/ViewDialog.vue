@@ -31,7 +31,8 @@
                     :color="getBadgeConfig(field, data).color"
                     text-color="white"
                     dense
-                    size="sm"
+                    size="md"
+                    class="q-px-md q-py-sm"
                   >
                     {{ getBadgeConfig(field, data).label }}
                   </q-chip>

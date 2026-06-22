@@ -232,6 +232,7 @@ import DashboardFilters from 'src/components/dashboard/DashboardFilters.vue'
 import StatusDistributionCard from 'src/components/dashboard/StatusDistributionCard.vue'
 import ProgressGauge from 'src/components/dashboard/ProgressGauge.vue'
 import AppTable from 'src/components/admin/MarkupTable.vue'
+import { notify } from 'src/utils/notify'
 
 const dashboardStore = useDashboardStore()
 
@@ -351,7 +352,7 @@ async function fetchDashboard(nextFilters = filters.value) {
       status: nextFilters.status || undefined,
     })
   } catch {
-    // The store action already notified the user.
+    notify.negative('Failed to load dashboard summary. Please try again.')
   }
 }
 

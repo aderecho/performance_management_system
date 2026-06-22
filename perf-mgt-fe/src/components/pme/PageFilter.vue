@@ -70,6 +70,7 @@
 import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { usePmeDocumentStore } from 'src/stores/pme/pmeDocument'
+import { notify } from 'src/utils/notify'
 
 const route = useRoute()
 const pmeDocumentStore = usePmeDocumentStore()
@@ -90,7 +91,7 @@ async function loadLevel(documentId, parentId = null, levelIndex = 0) {
     levels.value[levelIndex] = { options }
 
   } catch {
-    // Already put error notification in the pmeDocumentStore.fetchFilterItems()
+    notify.negative('Failed to load filter items. Please try again.')
   }
 }
 
