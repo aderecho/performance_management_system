@@ -1,6 +1,5 @@
 import { defineStore, acceptHMRUpdate } from 'pinia'
 import { api } from 'src/boot/axios'
-import { notify } from 'src/utils/notify'
 
 export const useAuthStore = defineStore('authStore', {
   state: () => ({
@@ -43,7 +42,6 @@ export const useAuthStore = defineStore('authStore', {
           throw new Error('Unable to verify session.')
         }
 
-        notify.positive(`Welcome back, ${email}!`)
         return user
       } catch (err) {
         this.clearSession()

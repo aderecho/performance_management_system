@@ -159,7 +159,7 @@ def build_document_item(
     # Load initiatives (NO unit filtering here)
     initiatives = Initiative.objects.filter(
         item__document=document,
-        accomplishment__isnull=False
+        accomplishment__status=InitiativeAccomplishment.STATUS_ACTIVE,
     )
 
     if subtree_ids:
@@ -358,7 +358,7 @@ def get_dashboard_summary(search=None, sra=None, status=None):
     accomplishment_totals = defaultdict(float)
     initiatives = Initiative.objects.filter(
         item_id__in=measure_ids,
-        accomplishment__isnull=False,
+        accomplishment__status=InitiativeAccomplishment.STATUS_ACTIVE,
     ).only("item_id", "value")
 
     for initiative in initiatives:

@@ -17,21 +17,22 @@
           <!-- GRID -->
           <div v-else class="row q-col-gutter-md">
             <div v-for="field in fields" :key="field.key" class="col-12 col-sm-6">
-              <div class="q-pa-sm bordered rounded-borders bg-grey-1">
+              <div class="q-pa-sm  rounded-borders bg-grey-1">
                 <!-- LABEL -->
-                <div class="text-caption text-grey-7">
+                <div class="text-caption  text-weight-medium ">
                   {{ field.label }}
                 </div>
 
                 <!-- VALUE -->
-                <div class="text-body1 text-weight-medium">
+                <div class="text-grey-8">
                   <!-- BADGE -->
                   <q-chip
                     v-if="field.type === 'badge'"
                     :color="getBadgeConfig(field, data).color"
                     text-color="white"
                     dense
-                    size="sm"
+                    size="md"
+                    class="q-px-md q-py-sm"
                   >
                     {{ getBadgeConfig(field, data).label }}
                   </q-chip>

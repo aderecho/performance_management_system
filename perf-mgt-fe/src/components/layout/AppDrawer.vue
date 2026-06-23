@@ -16,10 +16,10 @@
                     </q-item>
                 </div>
 
-                <q-separator v-if="configStore.templateList?.length" inset class="q-my-sm" />
+                <q-separator v-if="pmeTemplateStore.templates?.length" inset class="q-my-sm" />
 
                 <!-- DOCUMENTS -->
-                <q-expansion-item v-for="template in configStore.templateList" :key="template.id" dense-toggle>
+                <q-expansion-item v-for="template in pmeTemplateStore.templates" :key="template.id" dense-toggle>
                     <template #header>
                         <q-item-section avatar>
                             <ScrollText :size="22" :stroke-width="2" />
@@ -40,11 +40,11 @@
 
         <!-- Footer -->
         <div class="q-pa-md">
-            <div class="flex flex-center q-gutter-xs">
+            <div class="flex flex-center q-gutter-lg">
                 <a class="text-primary" href="https://privacy.up.edu.ph" target="_blank">
                     Privacy Policy
                 </a>
-                <span> · </span>
+                
                 <a class="text-primary" href="javascript:void(0)">
                     About the App
                 </a>
@@ -55,10 +55,11 @@
 
 <script setup>
 import { onMounted } from 'vue'
-import { useConfigStore } from 'src/stores/config'
+import { usePmeTemplateStore } from 'src/stores/pme/template'
 import { documentRoute } from 'src/router/routeHelpers'
 import { useAuthStore } from 'src/stores/auth'
 import { Gauge, UsersRound, ShieldUser, FileClock, KeyRound, ScrollText } from 'lucide-vue-next'
+import { notify } from 'src/utils/notify'
 
 const authStore = useAuthStore()
 
@@ -71,7 +72,7 @@ defineProps({
 
 defineEmits(['update:modelValue'])
 
-const configStore = useConfigStore()
+const pmeTemplateStore = usePmeTemplateStore()
 
 const links = [
     { icon: Gauge, text: 'Dashboard', to: '/dashboard' },
@@ -83,11 +84,11 @@ const links = [
 
 onMounted(async () => {
     // preserve original behavior
-    if (!configStore.templateList?.length) {
+    if (!pmeTemplateStore.templates?.length) {
         try {
-            await configStore.getTemplateList()
+            await pmeTemplateStore.fetchTemplates()
         } catch {
-            // Store captures the error state.
+            notify.negative('Failed to load PME documents. Please try again.')
         }
     }
 })

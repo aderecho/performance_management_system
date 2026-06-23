@@ -78,7 +78,7 @@
 
         <q-card-actions align="right" class="q-pr-md">
           <q-btn flat label="Cancel" color="grey-7" @click="close(false)" />
-          <q-btn type="submit" label="Submit" color="primary" :loading="isSubmitting" />
+          <q-btn type="submit" label="Submit" color="primary" :loading="isSubmitting || loading" />
         </q-card-actions>
       </q-form>
     </q-card>
@@ -90,7 +90,6 @@ import { computed, watch } from 'vue'
 import { useForm, useField } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { initiativeSchema } from 'src/validators/initiative.schema'
-import { useInitiativeStore } from 'src/stores/pme/initiative'
 import { today } from 'src/helpers/date'
 
 const emit = defineEmits(['update:modelValue', 'submitted'])
@@ -105,9 +104,11 @@ const props = defineProps({
     type: Object,
     default: null,
   },
+  loading: {
+    type: Boolean,
+    default: false,
+  },
 })
-
-const initiativeStore = useInitiativeStore()
 
 // Validation
 const { handleSubmit, resetForm, isSubmitting, setValues } = useForm({
@@ -165,15 +166,8 @@ const itemOptions = computed(() =>
 // Submit
 const isEdit = computed(() => !!props.initiative)
 
-const onSubmit = handleSubmit(async (values) => {
-  if (isEdit.value) {
-    await initiativeStore.updateInitiative(props.initiative.id, values)
-  } else {
-    await initiativeStore.createInitiative(values)
-  }
-
-  emit('submitted')
-  close(false)
+const onSubmit = handleSubmit((values) => {
+  emit('submitted', values)
 })
 
 const close = (val = false) => {

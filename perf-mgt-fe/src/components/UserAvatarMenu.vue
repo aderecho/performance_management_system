@@ -7,8 +7,8 @@
         <q-card-section class="row no-wrap q-pa-md">
           <div class="column">
             <div class="text-h6 q-mb-md">Settings</div>
-            <q-toggle :model-value="configStore.darkMode" label="Dark Mode" checked-icon="dark_mode"
-              unchecked-icon="light_mode" @update:model-value="configStore.setDarkMode" />
+            <q-toggle :model-value="themeStore.darkMode" label="Dark Mode" checked-icon="dark_mode"
+              unchecked-icon="light_mode" @update:model-value="themeStore.setDarkMode" />
           </div>
 
           <q-separator vertical inset class="q-mx-lg" />
@@ -32,12 +32,12 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import { useAuthStore } from 'src/stores/auth'
-import { useConfigStore } from 'src/stores/config'
+import { useThemeStore } from 'src/stores/theme'
 import InitialsAvatar from './InitialsAvatar.vue'
 import { notify } from 'src/utils/notify'
 
 const authStore = useAuthStore()
-const configStore = useConfigStore()
+const themeStore = useThemeStore()
 const router = useRouter()
 
 async function handleLogout() {

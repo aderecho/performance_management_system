@@ -1,6 +1,7 @@
 import { defineStore, acceptHMRUpdate } from 'pinia'
 import { api } from 'boot/axios'
-import { notify } from 'src/utils/notify'
+
+let fetchDashboardSummaryRequestKey = 0
 
 export const useDashboardStore = defineStore('dashboardStore', {
   state: () => ({
@@ -11,21 +12,30 @@ export const useDashboardStore = defineStore('dashboardStore', {
 
   actions: {
     async fetchDashboardSummary(params = {}) {
+      const requestKey = ++fetchDashboardSummaryRequestKey
       this.loading = true
       this.error = null
 
       try {
         const response = await api.get('/pme/dashboard/summary/', { params })
+
+        if (requestKey !== fetchDashboardSummaryRequestKey) {
+          return response.data
+        }
+
         this.dashboardSummary = response.data
         return response.data
       } catch (err) {
+        if (requestKey !== fetchDashboardSummaryRequestKey) {
+          return null
+        }
+
         this.error = err.response?.data || err.message
-        notify.negative(
-          `Failed to load dashboard summary. ${err.response?.data?.message || 'Please try again.'}`,
-        )
         throw err
       } finally {
-        this.loading = false
+        if (requestKey === fetchDashboardSummaryRequestKey) {
+          this.loading = false
+        }
       }
     },
   },

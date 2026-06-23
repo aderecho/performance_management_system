@@ -58,14 +58,26 @@
                 dense
                 flat
                 round
-                color="amber"
+                color="dark-grey"
                 @click="onMarkAsAccomplished(props.row)"
               >
-                <FileCheck2 v-if="!props.row.accomplishment" :size="18" :stroke-width="2" />
-                <RotateCcw v-else :size="22" :stroke-width="2" />
+                <ClipboardCheck  v-if="!props.row.is_accomplished" :size="18" :stroke-width="2" />
+                <RotateCcw v-else :size="18" :stroke-width="2" />
                 <q-tooltip>{{
-                  !props.row.accomplishment ? 'Mark as Accomplished' : 'Revert'
+                  !props.row.is_accomplished ? 'Mark as Accomplished' : 'Revert'
                 }}</q-tooltip>
+              </q-btn>
+
+              <q-btn
+                dense
+                flat
+                round
+                color="dark-grey"
+                :disable="!getEvidenceHistory(props.row).length"
+                @click="openHistory(props.row)"
+              >
+                <History :size="18" :stroke-width="2" />
+                <q-tooltip>View history</q-tooltip>
               </q-btn>
 
               <q-btn
@@ -108,6 +120,71 @@
     <RevertConfirmDialog v-model="showRevertDialog" @confirmRevert="confirmRevert">
       Are you sure you want to revert this accomplishment?
     </RevertConfirmDialog>
+
+    <q-dialog v-model="showHistoryDialog">
+      <q-card class="history-dialog rounded-borders">
+        <q-card-section>
+          <div class="text-h6">Initiative History</div>
+          <div class="text-caption text-grey-8">{{ selectedHistoryInitiative?.description }}</div>
+        </q-card-section>
+
+        <q-card-section>
+          <q-markup-table
+            v-if="selectedHistory.length"
+            flat
+            bordered
+            class="wrap-table"
+          >
+            <thead>
+              <tr>
+                <th class="text-left">Evidence</th>
+                <th class="text-center">Status</th>
+                <th class="text-center">Uploaded</th>
+                <th class="text-center">Updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in selectedHistory" :key="item.id">
+                <td>
+                  <q-btn
+                    v-if="item.file_url"
+                    flat
+                    dense
+                    no-caps
+                    color="primary"
+                    type="a"
+                    :href="item.file_url"
+                    target="_blank"
+                    class="q-pa-none"
+                  >
+                    {{ item.file_name || 'View evidence' }}
+                  </q-btn>
+                  <span v-else class="text-grey-6">---</span>
+                </td>
+                <td class="text-center">
+                  <q-chip
+                    dense
+                    square
+                    :color="historyStatusColor(item.status)"
+                    text-color="white"
+                  >
+                    {{ item.status_label || historyStatusLabel(item.status) }}
+                  </q-chip>
+                </td>
+                <td class="text-center">{{ formatDateTime(item.created_at) }}</td>
+                <td class="text-center">{{ formatDateTime(item.updated_at) }}</td>
+              </tr>
+            </tbody>
+          </q-markup-table>
+
+          <div v-else class="text-grey text-center q-pa-md">No evidence history found.</div>
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn flat label="Close" color="primary" v-close-popup />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-dialog>
 </template>
 
@@ -115,7 +192,7 @@
 import { ref } from 'vue'
 import DeleteConfirmDialog from 'src/components/DeleteConfirmDialog.vue'
 import RevertConfirmDialog from 'src/components/RevertConfirmDialog.vue'
-import { Check, FileCheck2, RotateCcw, SquarePen, Trash2, X } from 'lucide-vue-next'
+import { Check, FileCheck2, ClipboardCheck, History, RotateCcw, SquarePen, Trash2, X } from 'lucide-vue-next'
 
 defineProps({
   modelValue: Boolean,
@@ -211,7 +288,10 @@ const editInitiative = (row) => {
 // Delete
 const showDeleteDialog = ref(false)
 const showRevertDialog = ref(false)
+const showHistoryDialog = ref(false)
 const selectedInitiative = ref(null)
+const selectedHistoryInitiative = ref(null)
+const selectedHistory = ref([])
 
 const onDeleteClick = (row) => {
   selectedInitiative.value = row
@@ -221,7 +301,7 @@ const onDeleteClick = (row) => {
 // Mark as accomplished
 const onMarkAsAccomplished = async (row) => {
   // Mark as Accomplished
-  if (!row.accomplishment) {
+  if (!row.is_accomplished) {
     emit('accomplished', row)
     return
   }
@@ -246,11 +326,34 @@ const confirmRevert = async () => {
   showRevertDialog.value = false
   emit('reverted', selectedInitiative.value)
 }
+
+const getEvidenceHistory = (row) => row.accomplishment?.evidence_history || []
+
+const openHistory = (row) => {
+  selectedHistoryInitiative.value = row
+  selectedHistory.value = getEvidenceHistory(row)
+  showHistoryDialog.value = true
+}
+
+const historyStatusColor = (status) => (status === 1 ? 'positive' : 'grey-7')
+
+const historyStatusLabel = (status) => (status === 1 ? 'Active' : 'Reverted')
+
+const formatDateTime = (value) => {
+  if (!value) return '---'
+
+  return new Date(value).toLocaleString()
+}
 </script>
 
 <style scoped>
 .initiative-list-dialog {
   max-width: 95vw;
   width: 1100px;
+}
+
+.history-dialog {
+  max-width: 92vw;
+  width: 760px;
 }
 </style>

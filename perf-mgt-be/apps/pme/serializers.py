@@ -7,6 +7,7 @@ from apps.pme.models import (
     ReportingPeriod,
     Initiative,
     InitiativeAccomplishment,
+    InitiativeAccomplishmentFile,
     ReportingFrequency,
     ItemContributor,
 )
@@ -158,40 +159,22 @@ class UserWithUnitSerializer(serializers.ModelSerializer):
         return UnitInlineSerializer(user_unit.unit).data if user_unit else None
     
 
-class InitiativeAccomplishmentSerializer(serializers.ModelSerializer):
-    reporting_period = serializers.PrimaryKeyRelatedField(
-        queryset=ReportingPeriod.objects.all()
-    )
-
-    reporting_period_detail = ReportingPeriodSerializer(
-        source="reporting_period",
-        read_only=True
-    )
+class InitiativeAccomplishmentFileSerializer(serializers.ModelSerializer):
     file_url = serializers.SerializerMethodField()
     file_name = serializers.SerializerMethodField()
+    status_label = serializers.CharField(source="get_status_display", read_only=True)
 
     class Meta:
-        model = InitiativeAccomplishment
+        model = InitiativeAccomplishmentFile
         fields = [
             "id",
-            "initiative",
-            "reporting_period",
-            "reporting_period_detail",
-            "file_path",
             "file_url",
             "file_name",
-            "submitted_by",
+            "status",
+            "status_label",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = (
-            "initiative",
-            "submitted_by",
-            "created_at",
-            "updated_at",
-            "file_url",
-            "file_name",
-        )
 
     def get_file_url(self, obj):
         if not obj.file_path:
@@ -208,6 +191,99 @@ class InitiativeAccomplishmentSerializer(serializers.ModelSerializer):
             return None
 
         return obj.file_path.name.split("/")[-1]
+
+
+class InitiativeAccomplishmentSerializer(serializers.ModelSerializer):
+    reporting_period = serializers.PrimaryKeyRelatedField(
+        queryset=ReportingPeriod.objects.all()
+    )
+
+    reporting_period_detail = ReportingPeriodSerializer(
+        source="reporting_period",
+        read_only=True
+    )
+    file_url = serializers.SerializerMethodField()
+    file_name = serializers.SerializerMethodField()
+    status_label = serializers.CharField(source="get_status_display", read_only=True)
+    evidence_history = serializers.SerializerMethodField()
+
+    class Meta:
+        model = InitiativeAccomplishment
+        fields = [
+            "id",
+            "initiative",
+            "reporting_period",
+            "reporting_period_detail",
+            "file_path",
+            "file_url",
+            "file_name",
+            "status",
+            "status_label",
+            "evidence_history",
+            "submitted_by",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = (
+            "initiative",
+            "submitted_by",
+            "created_at",
+            "updated_at",
+            "file_url",
+            "file_name",
+            "status",
+            "status_label",
+            "evidence_history",
+        )
+        extra_kwargs = {
+            "file_path": {
+                "write_only": True,
+                "required": False,
+                "allow_null": True,
+            },
+        }
+
+    def get_file_url(self, obj):
+        file_record = self.get_active_file(obj)
+        if file_record:
+            return InitiativeAccomplishmentFileSerializer(
+                file_record,
+                context=self.context,
+            ).data["file_url"]
+
+        if obj.status != InitiativeAccomplishment.STATUS_ACTIVE or not obj.file_path:
+            return None
+
+        request = self.context.get("request")
+        if request:
+            return request.build_absolute_uri(obj.file_path.url)
+
+        return obj.file_path.url
+
+    def get_file_name(self, obj):
+        file_record = self.get_active_file(obj)
+        if file_record:
+            return file_record.file_path.name.split("/")[-1]
+
+        if obj.status != InitiativeAccomplishment.STATUS_ACTIVE or not obj.file_path:
+            return None
+
+        return obj.file_path.name.split("/")[-1]
+
+    def get_evidence_history(self, obj):
+        return InitiativeAccomplishmentFileSerializer(
+            obj.files.all(),
+            many=True,
+            context=self.context,
+        ).data
+
+    def get_active_file(self, obj):
+        return (
+            obj.files
+            .filter(status=InitiativeAccomplishmentFile.STATUS_ACTIVE)
+            .order_by("-created_at")
+            .first()
+        )
     # reporting_period = ReportingPeriodSerializer(read_only=True)
 
     # class Meta:
@@ -257,7 +333,10 @@ class InitiativeSerializer(serializers.ModelSerializer):
             return None
 
     def get_is_accomplished(self, obj):
-        return hasattr(obj, "accomplishment")
+        try:
+            return obj.accomplishment.status == InitiativeAccomplishment.STATUS_ACTIVE
+        except InitiativeAccomplishment.DoesNotExist:
+            return False
 
     def get_created_by(self, obj):
         user = obj.created_by

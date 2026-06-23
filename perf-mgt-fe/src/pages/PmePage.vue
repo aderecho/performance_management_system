@@ -50,7 +50,7 @@
 
             <InitiativeFormModal v-model="showInitiativeFormModal" :items="pmeDocumentStore.documentWithItems.items || []"
                 :reporting-periods="pmeDocumentStore.reportingPeriods || []" @submitted="handleInitiativeSubmitted"
-                :initiative="selectedInitiative" />
+                :initiative="selectedInitiative" :loading="initiativeStore.loading.save" />
 
             <InitiativeListModal
                 v-model="showInitiativeModal"
@@ -79,6 +79,7 @@ import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { usePmeDocumentStore } from 'src/stores/pme/pmeDocument'
 import { useInitiativeStore } from 'src/stores/pme/initiative'
+import { notify } from 'src/utils/notify'
 
 import PageComboHeader from 'src/components/pme/PageComboHeader.vue'
 import HierarchyTable from 'src/components/pme/HierarchyTable.vue'
@@ -110,6 +111,7 @@ async function refreshDocument() {
   try {
     return await pmeDocumentStore.fetchDocument(route.params.documentId)
   } catch {
+    notify.negative('Failed to load document. Please try again.')
     return null
   }
 }
@@ -119,6 +121,7 @@ async function refreshSelectedInitiatives() {
     try {
       return await initiativeStore.fetchInitiatives(selectedIndicator.value.id)
     } catch {
+      notify.negative('Failed to load initiatives. Please try again.')
       return []
     }
   }
@@ -126,9 +129,9 @@ async function refreshSelectedInitiatives() {
   return []
 }
 
-function handleFilter(filters) {
+async function handleFilter(filters) {
   pmeDocumentStore.setFilters(filters)
-  refreshDocument()
+  await refreshDocument()
 }
 
 function handleAddInitiative() {
@@ -141,8 +144,12 @@ async function handleOpenInitiatives(indicator) {
 
   try {
     await initiativeStore.fetchInitiatives(indicator.id)
+
+    if (selectedIndicator.value?.id !== indicator.id) return
+
     showInitiativeModal.value = true
   } catch {
+    notify.negative('Failed to load initiatives. Please try again.')
     selectedIndicator.value = null
   }
 }
@@ -157,20 +164,36 @@ function handleMarkAsAccomplished(row) {
   showAccomplishmentFormModal.value = true
 }
 
-async function handleInitiativeSubmitted() {
-  showInitiativeFormModal.value = false
-  selectedInitiative.value = null
+async function handleInitiativeSubmitted(payload) {
+  const initiative = selectedInitiative.value
+  const isEdit = !!initiative
 
-  await refreshDocument()
-  await refreshSelectedInitiatives()
+  try {
+    if (isEdit) {
+      await initiativeStore.updateInitiative(initiative.id, payload)
+      notify.positive('Initiative updated successfully.')
+    } else {
+      await initiativeStore.createInitiative(payload)
+      notify.positive('Initiative submitted successfully.')
+    }
+
+    showInitiativeFormModal.value = false
+    selectedInitiative.value = null
+
+    await refreshDocument()
+    await refreshSelectedInitiatives()
+  } catch {
+    notify.negative(`Failed to ${isEdit ? 'update' : 'submit'} initiative. Please try again.`)
+  }
 }
 
 async function handleDeleteInitiative(row) {
   try {
     await initiativeStore.deleteInitiative(row.id)
+    notify.positive('Initiative removed successfully.')
     await refreshDocument()
   } catch {
-    // The store action already notified the user.
+    notify.negative('Failed to delete initiative. Please try again.')
   }
 }
 
@@ -179,6 +202,7 @@ async function handleAccomplishmentSubmitted(payload) {
 
   try {
     await initiativeStore.markAccomplished(selectedInitiative.value.id, payload)
+    notify.positive('Initiative marked as accomplished.')
 
     showAccomplishmentFormModal.value = false
     selectedInitiative.value = null
@@ -186,17 +210,18 @@ async function handleAccomplishmentSubmitted(payload) {
     await refreshDocument()
     await refreshSelectedInitiatives()
   } catch {
-    // The store action already notified the user.
+    notify.negative('Failed to mark initiative as accomplished. Please try again.')
   }
 }
 
 async function handleRevertAccomplishment(row) {
   try {
     await initiativeStore.revertAccomplishment(row.id)
+    notify.positive('Accomplishment reverted successfully.')
     await refreshDocument()
     await refreshSelectedInitiatives()
   } catch {
-    // The store action already notified the user.
+    notify.negative('Failed to revert accomplishment. Please try again.')
   }
 }
 
@@ -205,18 +230,19 @@ watch(
     async (newId) => {
         if (newId) {
             resetInitiativeUi()
-            pmeDocumentStore.clearDocumentState()
+            pmeDocumentStore.resetState()
+            initiativeStore.resetInitiatives()
 
             try {
                 await pmeDocumentStore.fetchDocument(newId)
             } catch {
-                // The store action already notified the user.
+                notify.negative('Failed to load document. Please try again.')
             }
 
             try {
                 await pmeDocumentStore.fetchReportingPeriods(newId)
             } catch {
-                // The store action already notified the user.
+                notify.negative('Failed to load reporting periods. Please try again.')
             }
         }
     },

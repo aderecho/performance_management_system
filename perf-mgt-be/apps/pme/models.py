@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 from apps.core.models import ( UnitOfMeasure, Unit )
+import posixpath
 import uuid
 
 User = settings.AUTH_USER_MODEL
@@ -186,11 +187,24 @@ class Initiative(models.Model):
     def __str__(self):
         return f"{self.item.name} - Period {self.description}"
     
+def initiative_evidence_upload_path(instance, filename):
+    upload_dir = settings.PME_EVIDENCE_UPLOAD_TO.strip("/")
+    return posixpath.join(upload_dir, filename)
+
+
 class InitiativeAccomplishment(models.Model):
+    STATUS_ACTIVE = 1
+    STATUS_REVERTED = 2
+    STATUS_CHOICES = [
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_REVERTED, "Reverted"),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     initiative = models.OneToOneField(Initiative, on_delete=models.CASCADE, related_name="accomplishment")
     reporting_period = models.ForeignKey(ReportingPeriod, on_delete=models.CASCADE, related_name="submissions", null=True, blank=True)
-    file_path = models.FileField(upload_to="pme/evidence/", null=True, blank=True)
+    file_path = models.FileField(upload_to=initiative_evidence_upload_path, null=True,  blank=True)
+    status = models.PositiveSmallIntegerField(choices=STATUS_CHOICES, default=STATUS_ACTIVE)
     submitted_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name="initiative_accomplishments")
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -204,3 +218,35 @@ class InitiativeAccomplishment(models.Model):
 
     def __str__(self):
         return f"{self.initiative.description} - Period {self.reporting_period}"
+
+
+class InitiativeAccomplishmentFile(models.Model):
+    STATUS_ACTIVE = 1
+    STATUS_REVERTED = 2
+    STATUS_CHOICES = [
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_REVERTED, "Reverted"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    accomplishment = models.ForeignKey(
+        InitiativeAccomplishment,
+        on_delete=models.CASCADE,
+        related_name="files",
+        db_column="pia_id",
+    )
+    file_path = models.FileField(upload_to=initiative_evidence_upload_path)
+    status = models.PositiveSmallIntegerField(choices=STATUS_CHOICES, default=STATUS_ACTIVE)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "pme_initiativeaccomplishment_files"
+        indexes = [
+            models.Index(fields=["accomplishment", "status"]),
+        ]
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.accomplishment} - {self.get_status_display()}"

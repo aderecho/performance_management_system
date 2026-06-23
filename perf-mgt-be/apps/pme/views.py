@@ -4,6 +4,7 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 from rest_framework.views import APIView
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
 from apps.core.models import UserUnit
@@ -15,6 +16,8 @@ from apps.pme.models import (
     Item,
     ReportingPeriod,
     Initiative,
+    InitiativeAccomplishment,
+    InitiativeAccomplishmentFile,
     ItemContributor,
 )
 from apps.pme.serializers import (
@@ -215,6 +218,7 @@ class InitiativeViewSet(viewsets.ModelViewSet):
                 "accomplishment"
                 )
             .prefetch_related(
+                "accomplishment__files",
                 prefetch_latest_submitted_accomplishment()
             )
         )
@@ -245,11 +249,14 @@ class InitiativeViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["get", "post", "delete"], url_path="accomplishments")
     def accomplishments(self, request, pk=None):
         initiative = self.get_object()
-        print(initiative)
 
         # GET
         if request.method == "GET":
-            qs = [initiative.accomplishment] if initiative.accomplishment else []
+            try:
+                qs = [initiative.accomplishment]
+            except InitiativeAccomplishment.DoesNotExist:
+                qs = []
+
             serializer = InitiativeAccomplishmentSerializer(
                 qs,
                 many=True,
@@ -259,7 +266,12 @@ class InitiativeViewSet(viewsets.ModelViewSet):
 
         # POST
         if request.method == "POST":
-            if hasattr(initiative, "accomplishment"):
+            try:
+                accomplishment = initiative.accomplishment
+            except InitiativeAccomplishment.DoesNotExist:
+                accomplishment = None
+
+            if accomplishment and accomplishment.status == InitiativeAccomplishment.STATUS_ACTIVE:
                 return Response(
                     {"detail": "Initiative already has an accomplishment."},
                     status=status.HTTP_400_BAD_REQUEST,
@@ -270,22 +282,79 @@ class InitiativeViewSet(viewsets.ModelViewSet):
                 context={"request": request},
             )
             serializer.is_valid(raise_exception=True)
-            serializer.save(
-                initiative=initiative,
-                submitted_by=request.user,
+
+            with transaction.atomic():
+                file_upload = serializer.validated_data.pop("file_path", None)
+
+                if accomplishment:
+                    accomplishment.reporting_period = serializer.validated_data["reporting_period"]
+                    accomplishment.status = InitiativeAccomplishment.STATUS_ACTIVE
+                    accomplishment.submitted_by = request.user
+                    accomplishment.save(
+                        update_fields=[
+                            "reporting_period",
+                            "status",
+                            "submitted_by",
+                            "updated_at",
+                        ]
+                    )
+                else:
+                    accomplishment = serializer.save(
+                        initiative=initiative,
+                        submitted_by=request.user,
+                        status=InitiativeAccomplishment.STATUS_ACTIVE,
+                    )
+
+                accomplishment.files.filter(
+                    status=InitiativeAccomplishmentFile.STATUS_ACTIVE
+                ).update(status=InitiativeAccomplishmentFile.STATUS_REVERTED)
+
+                if file_upload:
+                    evidence_file = InitiativeAccomplishmentFile.objects.create(
+                        accomplishment=accomplishment,
+                        file_path=file_upload,
+                        status=InitiativeAccomplishmentFile.STATUS_ACTIVE,
+                    )
+                    accomplishment.file_path = evidence_file.file_path.name
+                    accomplishment.save(update_fields=["file_path", "updated_at"])
+                else:
+                    accomplishment.file_path = None
+                    accomplishment.save(update_fields=["file_path", "updated_at"])
+
+            response_serializer = InitiativeAccomplishmentSerializer(
+                accomplishment,
+                context={"request": request},
             )
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
         # DELETE (REVERT)
         if request.method == "DELETE":
-            if not hasattr(initiative, "accomplishment"):
+            try:
+                accomplishment = initiative.accomplishment
+            except InitiativeAccomplishment.DoesNotExist:
                 return Response(
                     {"detail": "No accomplishment to delete."},
                     status=status.HTTP_404_NOT_FOUND,
                 )
 
-            initiative.accomplishment.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            if accomplishment.status != InitiativeAccomplishment.STATUS_ACTIVE:
+                return Response(
+                    {"detail": "No active accomplishment to revert."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            with transaction.atomic():
+                accomplishment.status = InitiativeAccomplishment.STATUS_REVERTED
+                accomplishment.save(update_fields=["status", "updated_at"])
+                accomplishment.files.filter(
+                    status=InitiativeAccomplishmentFile.STATUS_ACTIVE
+                ).update(status=InitiativeAccomplishmentFile.STATUS_REVERTED)
+
+            serializer = InitiativeAccomplishmentSerializer(
+                accomplishment,
+                context={"request": request},
+            )
+            return Response(serializer.data, status=status.HTTP_200_OK)
         # if request.method == "DELETE":
         #     if not initiative.accomplishment:
         #         return Response(

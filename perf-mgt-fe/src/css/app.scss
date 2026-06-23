@@ -177,9 +177,36 @@
   border-color: #d8dee8;
 }
 
+// MARKUP TABLE
+
+.markup-table-title {
+  font-size: var(--markup-table-title-font-size, 20px);
+}
+
+.markup-table-search {
+  max-width: 100%;
+  width: var(--markup-table-search-width, 280px);
+}
+
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
 // HEIGHTS
 .h-1 {
   height: 4px;
+}
+
+.h-2 {
+  height: 8px;
+}
+
+.h-3 {
+  height: 12px;
 }
 
 .h-7 {
@@ -391,6 +418,13 @@
 }
 
 
+// LOGIN
+.login-card {
+  border-radius: 12px;
+  max-width: 400px;
+  width: 100%;
+}
+
 // HIERARCHY TABLE
 .hierarchy-table table {
   table-layout: fixed;
@@ -404,4 +438,20 @@
   white-space: normal !important;
   word-break: break-word !important;
   overflow-wrap: anywhere !important;
+}
+
+
+// MAIN LAYOUT
+
+.main-layout {
+  height: 100vh;
+  overflow: hidden;
+}
+
+.main-router-view {
+  height: calc(100vh - 64px);
+  margin-top: 64px;
+  overflow-x: hidden;
+  overflow-y: auto; 
+  padding-top: 0 !important;
 }

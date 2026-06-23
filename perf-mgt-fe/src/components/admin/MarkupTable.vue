@@ -39,13 +39,11 @@
     <template v-slot:body-cell-is_active="props">
       <q-td :props="props">
         <q-chip
-          :color="props.row.is_active ? 'positive' : 'negative'"
-          class="q-px-md q-py-sm"
-          text-color="white"
-          dense
-          size="md"
-          outline
+          :color="props.row.is_active ? 'green-1' : 'red-1'"
+          :text-color="props.row.is_active ? 'green-9' : 'red-9'"
+          class="q-px-md text-weight-medium status-badge"
         >
+          <span class="status-dot" :class="props.row.is_active ? 'bg-green-9' : 'bg-red-9'" />
           {{ props.row.is_active ? 'Active' : 'Inactive' }}
         </q-chip>
       </q-td>
@@ -54,13 +52,11 @@
     <template v-slot:body-cell-is_superuser="props">
       <q-td :props="props">
         <q-chip
-          :color="props.row.is_superuser ? 'positive' : 'negative'"
-          class="q-px-md"
-          text-color="white"
-          dense
-          size="md"
-          outline
+          :color="props.row.is_superuser ? 'green-1' : 'grey-3'"
+          :text-color="props.row.is_superuser ? 'green-9' : 'red-8'"
+          class="q-px-md text-weight-medium status-badge"
         >
+          <span class="status-dot" :class="props.row.is_superuser ? 'bg-green-9' : 'bg-red-9'" />
           {{ props.row.is_superuser ? 'Yes' : 'No' }}
         </q-chip>
       </q-td>
@@ -145,3 +141,7 @@ const passthroughSlotNames = computed(() => {
   return Object.keys(slots).filter((slotName) => !reservedSlotNames.includes(slotName))
 })
 </script>
+
+<style scoped>
+
+</style>
