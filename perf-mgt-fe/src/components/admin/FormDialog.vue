@@ -29,12 +29,12 @@
             <div class="col-12">
               <q-input
                 v-model="form.password"
-                label="Password"
+                :label="isEdit ? 'Password (optional)' : 'Password'"
                 type="password"
                 dense
                 outlined
-                :rules="[(val) => !!val || 'Required']"
-                hide-bottom-space
+                :rules="isEdit ? [] : [(val) => !!val || 'Required']"
+                :hide-bottom-space="!isEdit"
               />
             </div>
 
@@ -209,7 +209,7 @@ watch(
   (val) => {
     if (val) {
       form.email = val.email || ''
-      form.password = val.password || ''
+      form.password = ''
       form.is_active = val.is_active ?? false
       form.is_superuser = val.is_superuser ?? false
 

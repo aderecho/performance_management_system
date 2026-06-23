@@ -177,24 +177,6 @@
   border-color: #d8dee8;
 }
 
-// MARKUP TABLE
-
-.markup-table-title {
-  font-size: var(--markup-table-title-font-size, 20px);
-}
-
-.markup-table-search {
-  max-width: 100%;
-  width: var(--markup-table-search-width, 280px);
-}
-
-.status-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-right: 6px;
-}
 
 // HEIGHTS
 .h-1 {
@@ -221,6 +203,7 @@
   min-height: 150px;
 }
 
+
 .min-h-294 {
   min-height: 294px;
 }
@@ -238,6 +221,11 @@
 .w-30 {
   width: 118px;
 }
+
+.min-w-160 {
+  min-width: 160px;
+}
+
 
 // SPACING
 
@@ -315,14 +303,6 @@
   color: #111827;
   font-size: 0.9rem;
 }
-
-// .pme-accomplishment-period-dot {
-//   background: #fdf2f5;
-//   border-radius: 8px;
-//   color: $primary;
-//   height: 34px;
-//   width: 34px;
-// }
 
 .pme-accomplishment-evidence-panel {
   border-style: dashed;
@@ -425,6 +405,25 @@
   width: 100%;
 }
 
+// MARKUP TABLE
+
+.markup-table-title {
+  font-size: var(--markup-table-title-font-size, 20px);
+}
+
+.markup-table-search {
+  max-width: 100%;
+  width: var(--markup-table-search-width, 280px);
+}
+
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
 // HIERARCHY TABLE
 .hierarchy-table table {
   table-layout: fixed;
@@ -454,4 +453,39 @@
   overflow-x: hidden;
   overflow-y: auto; 
   padding-top: 0 !important;
+}
+
+// USER FILTERS
+
+.admin-user-filters {
+  flex: none;
+  max-width: 100%;
+}
+
+.admin-user-filter {
+  flex: 0 0 160px;
+  width: 160px;
+  min-width: 160px;
+  max-width: 160px;
+}
+
+.admin-user-filter--unit {
+  flex-basis: 220px;
+  width: 220px;
+  min-width: 220px;
+  max-width: 220px;
+}
+
+@media (max-width: 900px) {
+  .admin-user-filters {
+    width: 100%;
+  }
+
+  .admin-user-filter,
+  .admin-user-filter--unit {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
 }

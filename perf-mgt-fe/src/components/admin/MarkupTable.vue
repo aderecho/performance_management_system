@@ -6,32 +6,38 @@
     :columns="props.columns"
     :row-key="props.rowKey"
     :filter="showSearch ? search : undefined"
+    v-model:pagination="pagination"
     :table-header-class="tableHeaderClass"
     class="rounded-3xl"
   >
     <template v-slot:top>
-      <div class="row full-width items-center justify-between">
+      <div class="row full-width items-center justify-between q-gutter-y-sm">
         <div class="col-12 col-sm">
           <div v-if="title" :class="[titleWeightClass, 'markup-table-title']" :style="titleVars">
             {{ title }}
           </div>
         </div>
 
-        <div v-if="showSearch" class="col-12 col-sm-auto">
-          <q-input
-            v-model="search"
-            class="rounded-2xl markup-table-search"
-            :style="searchVars"
-            outlined
-            dense
-            clearable
-            debounce="300"
-            :placeholder="searchPlaceholder"
-          >
-            <template v-slot:prepend>
-              <q-icon name="search" />
-            </template>
-          </q-input>
+        <div class="col-12 col-sm-auto">
+          <div class="row items-center justify-end gap-2">
+            <slot name="filters" />
+
+            <q-input
+              v-if="showSearch"
+              v-model="search"
+              class="rounded-2xl markup-table-search flex-none"
+              :style="searchVars"
+              outlined
+              dense
+              clearable
+              debounce="300"
+              :placeholder="searchPlaceholder"
+            >
+              <template v-slot:prepend>
+                <q-icon name="search" />
+              </template>
+            </q-input>
+          </div>
         </div>
       </div>
     </template>
@@ -64,12 +70,14 @@
 
     <template v-slot:body-cell-actions="props">
       <q-td :props="props">
-        <RowActions
-          :row="props.row"
-          @view="emit('view', $event)"
-          @edit="emit('edit', $event)"
-          @delete="emit('delete', $event)"
-        />
+        <slot name="body-cell-actions" v-bind="props">
+          <RowActions
+            :row="props.row"
+            @view="emit('view', $event)"
+            @edit="emit('edit', $event)"
+            @delete="emit('delete', $event)"
+          />
+        </slot>
       </q-td>
     </template>
 
@@ -120,6 +128,10 @@ const props = defineProps({
 const emit = defineEmits(['view', 'edit', 'delete'])
 const slots = useSlots()
 const search = ref('')
+const pagination = ref({
+  page: 1,
+  rowsPerPage: 10,
+})
 
 const titleVars = computed(() => ({
   '--markup-table-title-font-size': props.titleFontSize,
@@ -132,6 +144,7 @@ const searchVars = computed(() => ({
 const reservedSlotNames = [
   'default',
   'top-right',
+  'filters',
   'body-cell-is_active',
   'body-cell-is_superuser',
   'body-cell-actions',
@@ -139,6 +152,17 @@ const reservedSlotNames = [
 
 const passthroughSlotNames = computed(() => {
   return Object.keys(slots).filter((slotName) => !reservedSlotNames.includes(slotName))
+})
+
+function resetPagination() {
+  pagination.value = {
+    ...pagination.value,
+    page: 1,
+  }
+}
+
+defineExpose({
+  resetPagination,
 })
 </script>
 

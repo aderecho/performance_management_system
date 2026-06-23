@@ -8,11 +8,13 @@ export const useUserStore = defineStore('userStore', {
             list: false,
             stats: false,
             save: false,
+            delete: false,
         },
         error: {
             list: null,
             stats: null,
             save: null,
+            delete: null,
         },
         stats: null
     }),
@@ -23,7 +25,7 @@ export const useUserStore = defineStore('userStore', {
             this.error.list = null
 
             try {
-                const response = await api.get('/auth/users/', payload)
+                const response = await api.get('/auth/users/', {params: payload})
                 this.users = response.data
                 return response.data
             } catch (err) {
@@ -49,6 +51,48 @@ export const useUserStore = defineStore('userStore', {
                 throw err
             } finally {
                 this.loading.save = false
+            }
+        },
+
+        async updateUser(id, payload) {
+            this.loading.save = true
+            this.error.save = null
+
+            try {
+                const response = await api.put(`/auth/users/${id}/`, payload)
+                const index = this.users.findIndex(user => user.id === id)
+
+                if (index !== -1) {
+                    this.users.splice(index, 1, response.data)
+                }
+
+                return response.data
+            } catch (err) {
+                this.error.save = err.response?.data || err.message
+                throw err
+            } finally {
+                this.loading.save = false
+            }
+        },
+
+        async deactivateUser(id) {
+            this.loading.delete = true
+            this.error.delete = null
+
+            try {
+                const response = await api.patch(`/auth/users/${id}/`, { is_active: false })
+                const index = this.users.findIndex(user => user.id === id)
+
+                if (index !== -1) {
+                    this.users.splice(index, 1, response.data)
+                }
+
+                return response.data
+            } catch (err) {
+                this.error.delete = err.response?.data || err.message
+                throw err
+            } finally {
+                this.loading.delete = false
             }
         },
 

@@ -56,6 +56,30 @@ class UserUnitCreateSerializer(serializers.Serializer):
     is_active = serializers.BooleanField(default=True)
 
 
+def sync_user_units(user, user_units_data):
+    submitted_unit_ids = []
+
+    for user_unit in user_units_data:
+        unit = user_unit["unit"]
+        submitted_unit_ids.append(unit.id)
+
+        UserUnit.objects.update_or_create(
+            user=user,
+            unit=unit,
+            defaults={
+                "is_primary": user_unit.get("is_primary", False),
+                "is_active": user_unit.get("is_active", True),
+            },
+        )
+
+    UserUnit.objects.filter(user=user).exclude(
+        unit_id__in=submitted_unit_ids
+    ).update(
+        is_primary=False,
+        is_active=False,
+    )
+
+
 class UserCreateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
     profile = UserProfileCreateSerializer(write_only=True)
@@ -107,3 +131,60 @@ class UserCreateSerializer(serializers.ModelSerializer):
             )
 
         return user
+
+
+class UserUpdateSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(
+        write_only=True,
+        min_length=8,
+        required=False,
+        allow_blank=True,
+    )
+    profile = UserProfileCreateSerializer(write_only=True, required=False)
+    user_units = UserUnitCreateSerializer(
+        many=True,
+        write_only=True,
+        required=False,
+    )
+
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "email",
+            "password",
+            "is_active",
+            "is_superuser",
+            "profile",
+            "user_units",
+        ]
+
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        profile_data = validated_data.pop("profile", None)
+        user_units_data = validated_data.pop("user_units", None)
+        password = validated_data.pop("password", None)
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        if password:
+            instance.set_password(password)
+
+        instance.save()
+
+        if profile_data is not None:
+            Profile.objects.update_or_create(
+                user=instance,
+                defaults={
+                    "first_name": profile_data.get("first_name", ""),
+                    "middle_name": profile_data.get("middle_name", ""),
+                    "last_name": profile_data.get("last_name", ""),
+                    "suffix": profile_data.get("suffix", ""),
+                },
+            )
+
+        if user_units_data is not None:
+            sync_user_units(instance, user_units_data)
+
+        return instance

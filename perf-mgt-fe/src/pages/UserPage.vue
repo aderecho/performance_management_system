@@ -30,31 +30,68 @@
 
         </div>
 
-        <AppTable title="List of Users" :rows="userStore.users" :columns="columns" row-key="email"
-            title-font-size="15px" search-width="500px" table-header-class="bg-surface text-white"
-            @view="handleView" @edit="handleEdit" @delete="handleDelete" />
+        <AppTable ref="userTable" title="List of Users" :rows="userStore.users" :columns="columns" row-key="email"
+            title-font-size="15px" search-width="280px" table-header-class="bg-surface text-white"
+            @view="handleView" @edit="handleEdit" @delete="handleDelete">
+            <template #filters>
+                <UserFilters v-model="filters" @change="handleFilter" />
+            </template>
+
+            <template #body-cell-actions="props">
+                <div class="row items-center justify-center">
+                    <q-btn size="sm" flat round color="dark-grey" @click="handleView(props.row)">
+                        <Eye :size="18" :stroke-width="2" />
+                        <q-tooltip>View</q-tooltip>
+                    </q-btn>
+
+                    <q-btn size="sm" flat round color="secondary" @click="handleEdit(props.row)">
+                        <SquarePen :size="18" :stroke-width="2" />
+                        <q-tooltip>Edit</q-tooltip>
+                    </q-btn>
+
+                    <q-btn size="sm" flat round color="negative" @click="handleDelete(props.row)">
+                        <UserRoundX :size="18" :stroke-width="2" />
+                        <q-tooltip>Deactivate</q-tooltip>
+                    </q-btn>
+                </div>
+            </template>
+        </AppTable>
 
         <ViewDialog v-model="showViewDialog" title="User Details" :data="selectedUser" :fields="userFields" />
 
         <FormDialog v-model="showFormDialog" title="User" :data="selectedUser" :loading="userStore.loading.save"
             @submit="handleSubmit" />
+
+        <DeleteConfirmDialog v-model="showDeleteDialog" :loading="userStore.loading.delete" @confirmDelete="confirmDelete">
+            Are you sure you want to deactivate
+            <strong>{{ selectedUser?.email || 'this user' }}</strong>?
+        </DeleteConfirmDialog>
     </div>
 </template>
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import PageComboHeader from 'src/components/PageComboHeader.vue'
 import DashboardCard from 'src/components/admin/DashboardCard.vue'
 import ViewDialog from 'src/components/admin/ViewDialog.vue'
 import FormDialog from 'src/components/admin/FormDialog.vue'
+import UserFilters from 'src/components/admin/UserFilters.vue'
 import AppTable from 'src/components/admin/MarkupTable.vue'
+import DeleteConfirmDialog from 'src/components/DeleteConfirmDialog.vue'
 import { useUserStore } from 'src/stores/user'
-import { Users, UserCheck, UserPlus } from 'lucide-vue-next'
+import { Eye, SquarePen, UserRoundX, Users, UserCheck, UserPlus } from 'lucide-vue-next'
 import { notify } from 'src/utils/notify'
 
 const userStore = useUserStore()
 const showViewDialog = ref(false)
 const selectedUser = ref(null)
 const showFormDialog = ref(false)
+const showDeleteDialog = ref(false)
+const userTable = ref(null)
+const filters = ref({
+    primary_unit: null,
+    is_active: null,
+    is_superuser: null
+})
 
 const columns = [
     { name: 'name', label: 'Full Name', field: row => row.profile.last_name + ', ' + row.profile.first_name, align: 'left' },
@@ -129,15 +166,55 @@ function handleEdit(row) {
 
 function handleDelete(row) {
     console.log('Delete:', row)
+    selectedUser.value = row
+    showDeleteDialog.value = true
+}
+
+function getUserParams(nextFilters = filters.value) {
+    return Object.fromEntries(
+        Object.entries(nextFilters).filter(([, value]) => value !== null && value !== undefined && value !== '')
+    )
+}
+
+async function loadUsers(nextFilters = filters.value) {
+    await userStore.fetchUsers(getUserParams(nextFilters))
+}
+
+async function handleFilter(nextFilters) {
+    filters.value = { ...nextFilters }
+
+    try {
+        await loadUsers(nextFilters)
+    } catch {
+        notify.negative('Failed to filter users. Please try again.')
+    }
+}
+
+async function confirmDelete() {
+    if (!selectedUser.value?.id) return
+
+    try {
+        await userStore.deactivateUser(selectedUser.value.id)
+        notify.positive('User deactivated successfully.')
+
+        showDeleteDialog.value = false
+        selectedUser.value = null
+
+        await loadUsers()
+        await userStore.fetchUserStats()
+    } catch (err) {
+        console.error('Deactivate user failed:', err)
+        notify.negative('Failed to deactivate user. Please try again.')
+    }
 }
 
 async function handleSubmit(formData) {
     console.log('Form submitted:', formData)
+    const isEdit = !!selectedUser.value?.id
 
     try {
         const payload = {
             email: formData.email,
-            password: formData.password,
             is_active: formData.is_active,
             is_superuser: formData.is_superuser,
 
@@ -155,17 +232,32 @@ async function handleSubmit(formData) {
             }))
         }
 
-        await userStore.createUser(payload)
-        notify.positive('User created successfully.')
+        if (!isEdit || formData.password) {
+            payload.password = formData.password
+        }
+
+        if (isEdit) {
+            await userStore.updateUser(selectedUser.value.id, payload)
+            notify.positive('User updated successfully.')
+        } else {
+            await userStore.createUser(payload)
+            notify.positive('User created successfully.')
+        }
 
         showFormDialog.value = false
 
-        await userStore.fetchUsers()
+        await loadUsers()
+        await userStore.fetchUserStats()
+
+        if (!isEdit) {
+            await nextTick()
+            userTable.value?.resetPagination()
+        }
 
     } catch (err) {
-        console.error('Create user failed:', err)
+        console.error(`${isEdit ? 'Update' : 'Create'} user failed:`, err)
         console.log('Form submitted:', formData)
-        notify.negative('Failed to create user. Please try again.')
+        notify.negative(`Failed to ${isEdit ? 'update' : 'create'} user. Please try again.`)
     }
 }
 
@@ -188,7 +280,7 @@ const buttons = [
 
 onMounted(async () => {
     try {
-        await userStore.fetchUsers()
+        await loadUsers()
     } catch {
         notify.negative('Failed to load users. Please try again.')
     }

@@ -13,7 +13,7 @@ from django.http import JsonResponse
 
 from .authentication import CookieJWTAuthentication
 
-from .serializers import UserSerializer, UserCreateSerializer
+from .serializers import UserSerializer, UserCreateSerializer, UserUpdateSerializer
 from .services import UserDashboardService
 
 User = get_user_model()
@@ -159,7 +159,32 @@ class UserViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == "create":
             return UserCreateSerializer
+        if self.action in ["update", "partial_update"]:
+            return UserUpdateSerializer
         return UserSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        params = self.request.query_params
+
+        primary_unit = params.get("primary_unit")
+        is_active = params.get("is_active")
+        is_superuser = params.get("is_superuser")
+
+        if primary_unit:
+            queryset = queryset.filter(
+                user_units__unit_id=primary_unit,
+                user_units__is_primary=True,
+                user_units__is_active=True,
+            )
+
+        if is_active in ["true", "false"]:
+            queryset = queryset.filter(is_active=is_active == "true")
+
+        if is_superuser in ["true", "false"]:
+            queryset = queryset.filter(is_superuser=is_superuser == "true")
+
+        return queryset.distinct().order_by("-created_at")
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -171,6 +196,19 @@ class UserViewSet(viewsets.ModelViewSet):
             UserSerializer(user).data,
             status=status.HTTP_201_CREATED
         )
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+        serializer = self.get_serializer(
+            instance,
+            data=request.data,
+            partial=partial,
+        )
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+
+        return Response(UserSerializer(user).data, status=status.HTTP_200_OK)
 
 
 
