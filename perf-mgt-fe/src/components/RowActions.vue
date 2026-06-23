@@ -1,11 +1,11 @@
 <template>
     <div class="row items-center justify-center ">
-        <q-btn size="sm" flat round color="secondary" @click="$emit('view', row)">
+        <q-btn size="sm" flat round color="dark-grey" @click="$emit('view', row)">
             <Eye :size="18" :stroke-width="2" />
             <q-tooltip>View</q-tooltip>
         </q-btn>
 
-        <q-btn size="sm" flat round color="warning" @click="$emit('edit', row)">
+        <q-btn size="sm" flat round color="secondary" @click="$emit('edit', row)">
             <SquarePen :size="18" :stroke-width="2" />
             <q-tooltip>Edit</q-tooltip>
         </q-btn>

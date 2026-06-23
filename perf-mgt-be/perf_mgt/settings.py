@@ -171,6 +171,10 @@ MEDIA_URL = "/media/"
 
 STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_ROOT = BASE_DIR / "media"
+PME_EVIDENCE_UPLOAD_TO = os.environ.get(
+    "PME_EVIDENCE_UPLOAD_TO",
+    "pme/evidence/",
+)
 
 STORAGES = {
     "default": {

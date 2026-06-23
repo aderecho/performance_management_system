@@ -40,11 +40,11 @@
 
         <!-- Footer -->
         <div class="q-pa-md">
-            <div class="flex flex-center q-gutter-xs">
+            <div class="flex flex-center q-gutter-lg">
                 <a class="text-primary" href="https://privacy.up.edu.ph" target="_blank">
                     Privacy Policy
                 </a>
-                <span> · </span>
+                
                 <a class="text-primary" href="javascript:void(0)">
                     About the App
                 </a>

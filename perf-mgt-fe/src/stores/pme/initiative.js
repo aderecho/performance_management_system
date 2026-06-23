@@ -171,8 +171,8 @@ export const useInitiativeStore = defineStore('initiativeStore', {
       this.error.accomplishment = null
 
       try {
-        await api.delete(`/pme/initiatives/${id}/accomplishments/`)
-        return true
+        const response = await api.delete(`/pme/initiatives/${id}/accomplishments/`)
+        return response.data
       } catch (err) {
         this.error.accomplishment = err.response?.data || err.message
         throw err

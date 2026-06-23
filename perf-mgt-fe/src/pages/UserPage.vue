@@ -5,7 +5,7 @@
             { label: 'Home', to: '/dashboard' },
             { label: 'Admin' },
             { label: 'User Management' }
-        ]" :buttons="buttons" />
+        ]" :buttons="buttons" :show-filter="false" />
 
         <!-- CARDS -->
         <div class="row q-col-gutter-md q-mb-md">

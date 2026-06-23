@@ -9,6 +9,7 @@ from .models import (
     Initiative,
     ItemContributor,
     InitiativeAccomplishment,
+    InitiativeAccomplishmentFile,
 )
 from import_export import resources, fields
 from import_export.widgets import ForeignKeyWidget
@@ -93,6 +94,12 @@ class InitiativeAccomplishmentInline(admin.TabularInline):
     )
     readonly_fields = ("created_at",)
     show_change_link = True
+
+
+class InitiativeAccomplishmentFileInline(admin.TabularInline):
+    model = InitiativeAccomplishmentFile
+    extra = 0
+    readonly_fields = ("created_at", "updated_at")
 
 
 # TEMPLATE ADMIN
@@ -248,10 +255,12 @@ class InitiativeAccomplishmentAdmin(admin.ModelAdmin):
     list_display = (
         "initiative",
         "reporting_period",
+        "status",
         "submitted_by",
     )
 
     list_filter = (
+        "status",
         "reporting_period",
         "initiative__unit",
     )
@@ -267,6 +276,8 @@ class InitiativeAccomplishmentAdmin(admin.ModelAdmin):
         "reporting_period",
         "submitted_by",
     )
+
+    inlines = [InitiativeAccomplishmentFileInline]
 
     ordering = ("-created_at",)
 

@@ -159,15 +159,6 @@
   border-radius: 9999px;
 }
 
-.markup-table-title {
-  font-size: var(--markup-table-title-font-size, 20px);
-}
-
-.markup-table-search {
-  max-width: 100%;
-  width: var(--markup-table-search-width, 280px);
-}
-
 .border-b {
   border-bottom-width: 1px;
   border-bottom-style: solid;
@@ -184,6 +175,25 @@
 
 .border-blue-grey-200 {
   border-color: #d8dee8;
+}
+
+// MARKUP TABLE
+
+.markup-table-title {
+  font-size: var(--markup-table-title-font-size, 20px);
+}
+
+.markup-table-search {
+  max-width: 100%;
+  width: var(--markup-table-search-width, 280px);
+}
+
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
 }
 
 // HEIGHTS
@@ -442,6 +452,6 @@
   height: calc(100vh - 64px);
   margin-top: 64px;
   overflow-x: hidden;
-  overflow-y: auto;
+  overflow-y: auto; 
   padding-top: 0 !important;
 }
