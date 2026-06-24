@@ -4,8 +4,8 @@
         <q-scroll-area class="col">
             <q-list class="text-dark q-pa-md q-gutter-y-sm">
                 <!-- ADMIN LINKS-->
-                <div v-if="authStore.isSuperAdmin">
-                    <q-item v-for="link in links" :key="link.text" clickable :to="link.to" class="rounded"
+                <div v-if="visibleLinks.length">
+                    <q-item v-for="link in visibleLinks" :key="link.text" clickable :to="link.to" class="rounded"
                         active-class="bg-grey text-primary">
                         <q-item-section avatar>
                             <component :is="link.icon" :size="22" :stroke-width="2" />
@@ -54,7 +54,7 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { usePmeTemplateStore } from 'src/stores/pme/template'
 import { documentRoute } from 'src/router/routeHelpers'
 import { useAuthStore } from 'src/stores/auth'
@@ -75,12 +75,42 @@ defineEmits(['update:modelValue'])
 const pmeTemplateStore = usePmeTemplateStore()
 
 const links = [
-    { icon: Gauge, text: 'Dashboard', to: '/dashboard' },
-    { icon: UsersRound, text: 'User Management', to: '/admin/users' },
-    { icon: ShieldUser, text: 'Role Management', to: '/admin/roles' },
-    { icon: KeyRound, text: 'Permission Management', to: '/admin/permissions' },
-    { icon: FileClock, text: 'Audit Logs', to: '/admin/audit-logs' },
+    { icon: Gauge, text: 'Dashboard', to: '/admin/dashboard' },
+    {
+        icon: UsersRound,
+        text: 'User Management',
+        to: '/admin/users',
+        meta: { requiredPermission: 'authentication.view_user' },
+    },
+    {
+        icon: ShieldUser,
+        text: 'Role Management',
+        to: '/admin/roles',
+        meta: { requiredPermission: 'auth.view_group' },
+    },
+    {
+        icon: KeyRound,
+        text: 'Permission Management',
+        to: '/admin/permissions',
+        meta: {
+            requiredPermissions: [
+                'auth.view_permission',
+                'authentication.view_user',
+                'authentication.change_user',
+            ],
+        },
+    },
+    {
+        icon: FileClock,
+        text: 'Audit Logs',
+        to: '/admin/audit-logs',
+        meta: { requiresSuperAdmin: true },
+    },
 ]
+
+const visibleLinks = computed(() => {
+    return links.filter((link) => !link.meta || authStore.canAccess(link.meta))
+})
 
 onMounted(async () => {
     // preserve original behavior

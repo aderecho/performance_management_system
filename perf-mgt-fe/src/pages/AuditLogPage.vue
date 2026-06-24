@@ -1,9 +1,9 @@
 <template>
     <div class="q-pa-md">
-        <PageComboHeader title="Audit Log" :breadcrumbs="[
-            { label: 'Home', to: '/dashboard' },
+        <PageComboHeader title="Audit Logs" :breadcrumbs="[
+            { label: 'Home', to: '/admin/dashboard' },
             { label: 'Admin' },
-            { label: 'Audit Log' }
+            { label: 'Audit Logs' }
         ]" :show-filter="false" />
     </div>
 </template>

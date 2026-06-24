@@ -1,6 +1,11 @@
 const routes = [
   {
     path: '/',
+    redirect: '/admin/dashboard',
+  },
+  {
+    path: '/admin',
+    redirect: '/admin/dashboard',
     component: () => import('layouts/MainLayout.vue'),
     children: [
       // {
@@ -16,7 +21,7 @@ const routes = [
         meta: { requiresAuth: true }
       },
       {
-        path: 'dashboard',
+        path: '/admin/dashboard',
         name: 'dashboard',
         component: () => import('pages/DashboardPage.vue'),
         meta: { requiresAuth: true }
@@ -25,25 +30,32 @@ const routes = [
         path: '/admin/users',
         name: 'users',
         component: () => import('pages/UserPage.vue'),
-        meta: { requiresAuth: true }
+        meta: { requiresAuth: true, requiredPermission: 'authentication.view_user' }
       },
       {
         path: '/admin/roles',
         name: 'roles',
         component: () => import('pages/RolePage.vue'),
-        meta: { requiresAuth: true }
+        meta: { requiresAuth: true, requiredPermission: 'auth.view_group' }
       },
       {
         path: '/admin/permissions',
         name: 'permissions',
         component: () => import('pages/PermissionPage.vue'),
-        meta: { requiresAuth: true }
+        meta: {
+          requiresAuth: true,
+          requiredPermissions: [
+            'auth.view_permission',
+            'authentication.view_user',
+            'authentication.change_user'
+          ]
+        }
       },
        {
         path: '/admin/audit-logs',
         name: 'audit-logs',
         component: () => import('pages/AuditLogPage.vue'),
-        meta: { requiresAuth: true }
+        meta: { requiresAuth: true, requiresSuperAdmin: true }
       },
     ],
   },

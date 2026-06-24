@@ -75,6 +75,29 @@ export const useUserStore = defineStore('userStore', {
             }
         },
 
+        async updateUserPermissions(id, permissionIds) {
+            this.loading.save = true
+            this.error.save = null
+
+            try {
+                const response = await api.patch(`/auth/users/${id}/`, {
+                    user_permission_ids: permissionIds,
+                })
+                const index = this.users.findIndex(user => user.id === id)
+
+                if (index !== -1) {
+                    this.users.splice(index, 1, response.data)
+                }
+
+                return response.data
+            } catch (err) {
+                this.error.save = err.response?.data || err.message
+                throw err
+            } finally {
+                this.loading.save = false
+            }
+        },
+
         async deactivateUser(id) {
             this.loading.delete = true
             this.error.delete = null

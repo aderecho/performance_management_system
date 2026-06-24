@@ -13,9 +13,13 @@ export async function authGuard(to, from, next) {
     return next('/login')
   }
 
+  if (to.meta.requiresAuth && !auth.canAccess(to.meta)) {
+    return next('/admin/dashboard')
+  }
+
   // Redirect logged-in users away from /login
   if (to.path === '/login' && auth.isAuthenticated) {
-    return next('/')
+    return next('/admin/dashboard')
   }
 
   return next()

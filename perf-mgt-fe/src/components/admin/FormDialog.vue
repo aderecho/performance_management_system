@@ -90,6 +90,22 @@
 
             <div class="col-12">
               <q-select
+                v-model="form.role_ids"
+                :options="roleStore.options"
+                option-value="value"
+                option-label="label"
+                emit-value
+                map-options
+                multiple
+                use-chips
+                label="Roles"
+                outlined
+                dense
+              />
+            </div>
+
+            <div class="col-12">
+              <q-select
                 v-model="form.units"
                 v-model:input-value="unitSearch"
                 :options="filteredUnitOptions"
@@ -145,8 +161,10 @@
 <script setup>
 import { ref, computed, onMounted, reactive, watch } from 'vue'
 import { useCoreStore } from 'src/stores/core'
+import { useRoleStore } from 'src/stores/role'
 
 const coreStore = useCoreStore()
+const roleStore = useRoleStore()
 
 const props = defineProps({
   modelValue: Boolean,
@@ -169,6 +187,7 @@ const form = reactive({
   password: '',
   is_active: true,
   is_superuser: false,
+  role_ids: [],
   profile: {
     first_name: '',
     middle_name: '',
@@ -212,6 +231,7 @@ watch(
       form.password = ''
       form.is_active = val.is_active ?? false
       form.is_superuser = val.is_superuser ?? false
+      form.role_ids = val.role_ids || []
 
       form.profile.first_name = val.profile?.first_name || ''
       form.profile.middle_name = val.profile?.middle_name || ''
@@ -244,6 +264,7 @@ function resetForm() {
   form.password = ''
   form.is_active = true
   form.is_superuser = false
+  form.role_ids = []
   form.profile.first_name = ''
   form.profile.middle_name = ''
   form.profile.last_name = ''
@@ -259,7 +280,10 @@ function handleSubmit() {
 
 onMounted(async () => {
   try {
-    await coreStore.fetchUnits()
+    await Promise.all([
+      coreStore.fetchUnits(),
+      roleStore.fetchRoles(),
+    ])
   } catch {
     // Store captures the error state.
   } finally {
