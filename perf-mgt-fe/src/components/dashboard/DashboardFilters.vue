@@ -8,7 +8,7 @@
                 dense
                 clearable
                 debounce="350"
-                placeholder="Search objective or performance measure..."
+                :placeholder="searchPlaceholder"
                 @update:model-value="emitChange"
             >
                 <template #prepend>
@@ -17,36 +17,23 @@
             </q-input>
         </div>
 
-        <div class="col-12 col-md-3">
+        <div
+            v-for="filter in selectFilters"
+            :key="filter.name"
+            :class="filter.colClass || 'col-12 col-md-2'"
+        >
             <q-select
-                v-model="local.sra"
+                v-model="local[filter.name]"
                 class="rounded-2xl"
-                :options="sraOptions"
-                option-label="label"
-                option-value="value"
-                emit-value
-                map-options
+                :options="filter.options"
+                :option-label="filter.optionLabel || 'label'"
+                :option-value="filter.optionValue || 'value'"
+                :emit-value="filter.emitValue ?? true"
+                :map-options="filter.mapOptions ?? true"
                 outlined
                 dense
-                clearable
-                label="Strategic Result Area"
-                @update:model-value="emitChange"
-            />
-        </div>
-
-        <div class="col-12 col-md-2">
-            <q-select
-                v-model="local.status"
-                class="rounded-2xl"
-                :options="statusOptions"
-                option-label="label"
-                option-value="value"
-                emit-value
-                map-options
-                outlined
-                dense
-                clearable
-                label="Status"
+                :clearable="filter.clearable ?? true"
+                :label="filter.label"
                 @update:model-value="emitChange"
             />
         </div>
@@ -54,38 +41,51 @@
 </template>
 
 <script setup>
-import { reactive, watch } from 'vue'
+import { computed, reactive, watch } from 'vue'
 
 const props = defineProps({
     modelValue: { type: Object, default: () => ({}) },
-    sraOptions: { type: Array, default: () => [] },
-    statusOptions: { type: Array, default: () => [] }
+    searchPlaceholder: {
+        type: String,
+        default: 'Search objective or performance measure...',
+    },
+    selectFilters: { type: Array, default: () => [] },
 })
 
 const emit = defineEmits(['update:modelValue', 'change'])
 
 const local = reactive({
     search: '',
-    sra: null,
-    status: null
 })
 
+const filterNames = computed(() => [
+    'search',
+    ...props.selectFilters.map((filter) => filter.name),
+])
+
 watch(
-    () => props.modelValue,
-    value => {
-        local.search = value?.search || ''
-        local.sra = value?.sra || null
-        local.status = value?.status || null
+    [() => props.modelValue, filterNames],
+    ([value, names]) => {
+        names.forEach((name) => {
+            local[name] = name === 'search'
+                ? value?.[name] || ''
+                : value?.[name] || null
+        })
+
+        Object.keys(local).forEach((name) => {
+            if (!names.includes(name)) {
+                delete local[name]
+            }
+        })
     },
     { immediate: true, deep: true }
 )
 
 function emitChange() {
-    const filters = {
-        search: local.search || null,
-        sra: local.sra || null,
-        status: local.status || null
-    }
+    const filters = filterNames.value.reduce((payload, name) => {
+        payload[name] = local[name] || null
+        return payload
+    }, {})
 
     emit('update:modelValue', filters)
     emit('change', filters)

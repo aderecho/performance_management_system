@@ -8,8 +8,8 @@
 
     <DashboardFilters
       v-model="filters"
-      :sra-options="sraOptions"
-      :status-options="statusOptions"
+      :search-placeholder="searchPlaceholder"
+      :select-filters="dashboardFilterFields"
       @change="fetchDashboard"
     />
 
@@ -81,9 +81,9 @@
     <q-card flat bordered class="bg-white shadow-1 rounded-4xl q-mb-md">
       <q-card-section class="q-pa-md">
         <div class="q-mb-md">
-          <div class="text-h6 text-weight-bold text-dark">Objective Summary</div>
+          <div class="text-h6 text-weight-bold text-dark">{{ cardLabel }} Summary</div>
           <div class="text-caption text-blue-grey-8">
-            Search and filter objectives by SRA or implementation status
+            Search and filter {{ cardLabelPluralLower }} by {{ groupFilterLabel }} or implementation status
           </div>
         </div>
 
@@ -95,7 +95,7 @@
         />
 
         <div v-else-if="!objectives.length" class="text-center text-blue-grey-7 q-py-xl">
-          No objectives found.
+          No {{ cardLabelPluralLower }} found.
         </div>
 
         <div v-else class="row q-col-gutter-md">
@@ -105,10 +105,10 @@
                 <div class="row items-center justify-between no-wrap q-mb-sm">
                   <div class="q-pr-md min-w-0">
                     <div class="text-subtitle1 text-weight-bold text-dark">
-                      Objective {{ objective.code }}: {{ objective.name }}
+                      {{ cardLabel }} {{ objective.code }}: {{ objective.name }}
                     </div>
                     <div class="text-caption text-blue-grey-8 text-weight-medium">
-                      {{ objective.sra?.label || 'No SRA' }}
+                      {{ objective.group?.label || `No ${groupFilterLabel}` }}
                     </div>
                   </div>
 
@@ -151,7 +151,7 @@
                           {{ objective.main_status_label }}
                         </div>
                         <div class="text-caption text-blue-grey-8">
-                          {{ objective.measure_count }} performance measure(s)
+                          {{ objective.measure_count }} {{ measureCountLabel(objective.measure_count) }}
                         </div>
                       </div>
 
@@ -198,7 +198,7 @@
     <q-card flat bordered class="bg-white shadow-1 rounded-3xl">
       <q-card-section class="q-pa-md">
         <div class="q-mb-md">
-          <div class="text-h6 text-weight-bold text-dark">Detailed Objective List</div>
+          <div class="text-h6 text-weight-bold text-dark">Detailed {{ cardLabel }} List</div>
           <div class="text-caption text-blue-grey-8">
             Tabular summary for reporting and validation
           </div>
@@ -238,9 +238,11 @@ const dashboardStore = useDashboardStore()
 
 const filters = ref({
   search: null,
-  sra: null,
+  document: null,
+  group: null,
   status: null,
 })
+const lastDocument = ref(filters.value.document)
 
 const statusConfig = [
   { key: 'on_track', label: 'On Track', color: '#22c55e' },
@@ -251,7 +253,17 @@ const statusConfig = [
 
 const summary = computed(() => dashboardStore.dashboardSummary || {})
 const objectives = computed(() => summary.value.objectives_list || [])
-const sraOptions = computed(() => summary.value.sra_options || [])
+const documentOptions = computed(() => summary.value.document_options || [])
+const groupOptions = computed(() => summary.value.group_options || summary.value.sra_options || [])
+const groupFilterLabel = computed(() => summary.value.group_filter_label || 'Strategic Result Area')
+const cardLabel = computed(() => summary.value.card_label || 'Objective')
+const measureLabel = computed(() => summary.value.measure_label || 'Performance Measure')
+const cardLabelPlural = computed(() => pluralize(cardLabel.value))
+const cardLabelPluralLower = computed(() => cardLabelPlural.value.toLowerCase())
+const measureLabelPlural = computed(() => pluralize(measureLabel.value))
+const searchPlaceholder = computed(
+  () => `Search ${cardLabel.value.toLowerCase()} or ${measureLabel.value.toLowerCase()}...`,
+)
 const statusOptions = computed(
   () =>
     summary.value.status_options ||
@@ -260,6 +272,26 @@ const statusOptions = computed(
       label: item.label,
     })),
 )
+const dashboardFilterFields = computed(() => [
+  {
+    name: 'document',
+    label: 'Document',
+    options: documentOptions.value,
+    colClass: 'col-12 col-md-3',
+  },
+  {
+    name: 'group',
+    label: groupFilterLabel.value,
+    options: groupOptions.value,
+    colClass: 'col-12 col-md-3',
+  },
+  {
+    name: 'status',
+    label: 'Status',
+    options: statusOptions.value,
+    colClass: 'col-12 col-md-2',
+  },
+])
 
 const measuresTotal = computed(() => summary.value.measures || 0)
 const overallProgress = computed(() => Math.round(summary.value.overall_progress || 0))
@@ -274,28 +306,28 @@ const statusItems = computed(() => {
 })
 
 const metrics = computed(() => [
-  { label: 'Objectives', value: summary.value.objectives || 0 },
-  { label: 'Performance Measures', value: summary.value.performance_measures || 0 },
+  { label: cardLabelPlural.value, value: summary.value.objectives || 0 },
+  { label: measureLabelPlural.value, value: summary.value.performance_measures || 0 },
   { label: 'Completed / On Track', value: (summary.value.completed || 0) + (summary.value.on_track || 0) },
   { label: 'Need Attention', value: summary.value.major_disruption || 0 },
 ])
 
-const detailColumns = [
+const detailColumns = computed(() => [
   {
     name: 'objective',
-    label: 'Objective',
+    label: cardLabel.value,
     field: (row) => `${row.code} ${row.name}`,
     align: 'left',
   },
   {
-    name: 'sra',
-    label: 'SRA',
-    field: (row) => row.sra?.label || 'No SRA',
+    name: 'group',
+    label: groupFilterLabel.value,
+    field: (row) => row.group?.label || `No ${groupFilterLabel.value}`,
     align: 'left',
   },
   {
     name: 'measure_count',
-    label: 'Measures',
+    label: measureLabelPlural.value,
     field: 'measure_count',
     align: 'left',
   },
@@ -311,7 +343,19 @@ const detailColumns = [
     field: 'main_status_label',
     align: 'left',
   },
-]
+])
+
+function pluralize(label) {
+  if (!label) {
+    return ''
+  }
+
+  return label.endsWith('s') ? label : `${label}s`
+}
+
+function measureCountLabel(count) {
+  return (Number(count) === 1 ? measureLabel.value : measureLabelPlural.value).toLowerCase()
+}
 
 function statusColor(status) {
   return statusConfig.find((item) => item.key === status)?.color || '#9ca3af'
@@ -345,12 +389,25 @@ function objectiveProgressItems(objective) {
 }
 
 async function fetchDashboard(nextFilters = filters.value) {
+  const nextDocument = nextFilters.document || null
+  const documentChanged = nextDocument !== lastDocument.value
+  const selectedGroup = documentChanged ? null : nextFilters.group
+
+  if (documentChanged && nextFilters.group) {
+    filters.value = {
+      ...nextFilters,
+      group: null,
+    }
+  }
+
   try {
     await dashboardStore.fetchDashboardSummary({
       search: nextFilters.search || undefined,
-      sra: nextFilters.sra || undefined,
+      document: nextFilters.document || undefined,
+      group: selectedGroup || undefined,
       status: nextFilters.status || undefined,
     })
+    lastDocument.value = nextDocument
   } catch {
     notify.negative('Failed to load dashboard summary. Please try again.')
   }

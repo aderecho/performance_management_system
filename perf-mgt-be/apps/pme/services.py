@@ -298,57 +298,26 @@ def get_objective_status(measures):
 
 
 # DASHBOARD OVERALL SUMMARY
-def get_dashboard_summary(search=None, sra=None, status=None):
+def get_dashboard_summary(search=None, sra=None, status=None, document=None, group=None):
     today = timezone.localdate()
+    group_filter = group or sra
+
+    active_documents = Document.objects.filter(status=1).order_by("name")
+    item_qs = Item.objects.filter(
+        document__status=1,
+        status=1,
+    )
+
+    if document:
+        item_qs = item_qs.filter(document_id=document)
 
     items = list(
-        Item.objects.filter(
-            document__status=1,
-            status=1,
-        )
+        item_qs
         .select_related("document", "template_node_type", "parent")
         .order_by("code")
     )
 
     item_map = {item.id: item for item in items}
-    children_map = defaultdict(list)
-
-    for item in items:
-        children_map[item.parent_id].append(item)
-
-    def descendants(root_id):
-        result = []
-        stack = list(children_map[root_id])
-
-        while stack:
-            node = stack.pop()
-            result.append(node)
-            stack.extend(children_map[node.id])
-
-        return result
-
-    def nearest_sra(item):
-        current = item.parent
-
-        while current:
-            if current.template_node_type.name.lower() == "strategic result area":
-                return current
-            current = item_map.get(current.parent_id)
-
-        return None
-
-    sra_items = [
-        item for item in items
-        if item.template_node_type.name.lower() == "strategic result area"
-    ]
-
-    sra_options = [
-        {
-            "value": str(item.id),
-            "label": f"{item.code} {item.name}",
-        }
-        for item in sra_items
-    ]
 
     measure_ids = [
         item.id for item in items
@@ -364,23 +333,69 @@ def get_dashboard_summary(search=None, sra=None, status=None):
     for initiative in initiatives:
         accomplishment_totals[initiative.item_id] += float(initiative.value)
 
+    def format_item_label(item):
+        return f"{item.code} {item.name}".strip()
+
+    def ancestor_chain(item):
+        chain = []
+        current = item_map.get(item.parent_id)
+
+        while current:
+            chain.append(current)
+            current = item_map.get(current.parent_id)
+
+        return chain
+
+    def nearest_card(item):
+        for ancestor in ancestor_chain(item):
+            if ancestor.target is None:
+                return ancestor
+
+        return item
+
+    def nearest_group(card):
+        current = item_map.get(card.parent_id)
+
+        while current:
+            if current.target is None:
+                return current
+            current = item_map.get(current.parent_id)
+
+        return None
+
+    cards_map = {}
+    card_measures = defaultdict(list)
+    card_groups = {}
+    measure_cards = {}
+    card_type_counts = defaultdict(lambda: defaultdict(int))
+
+    for measure in [item for item in items if item.target is not None]:
+        card = nearest_card(measure)
+        measure_cards[measure.id] = card
+        card_type_counts[measure.document_id][card.template_node_type_id] += 1
+
+    document_card_types = {
+        document_id: max(counts, key=counts.get)
+        for document_id, counts in card_type_counts.items()
+    }
+
+    for measure in [item for item in items if item.target is not None]:
+        card = measure_cards[measure.id]
+
+        if card.template_node_type_id != document_card_types.get(measure.document_id):
+            continue
+
+        cards_map[card.id] = card
+        card_groups[card.id] = nearest_group(card)
+        card_measures[card.id].append(measure)
+
     objectives_payload = []
 
-    objectives = [
-        item for item in items
-        if item.template_node_type.name.lower() == "objective"
-    ]
-
-    for objective in objectives:
-        objective_sra = nearest_sra(objective)
-        objective_measures = [
-            item for item in descendants(objective.id)
-            if item.target is not None
-        ]
-
+    for card in sorted(cards_map.values(), key=lambda item: (item.document.name, item.code)):
+        objective_group = card_groups.get(card.id)
         measures_payload = []
 
-        for measure in objective_measures:
+        for measure in sorted(card_measures[card.id], key=lambda item: item.code):
             target = float(measure.target or 0)
             total = accomplishment_totals[measure.id]
             progress = round((total / target) * 100, 2) if target > 0 else 0
@@ -391,6 +406,7 @@ def get_dashboard_summary(search=None, sra=None, status=None):
                 "id": str(measure.id),
                 "code": measure.code,
                 "name": measure.name,
+                "node_type": measure.template_node_type.name,
                 "progress": round(progress),
                 "status": measure_status,
                 "status_label": status_label(measure_status),
@@ -407,16 +423,18 @@ def get_dashboard_summary(search=None, sra=None, status=None):
         objective_status = get_objective_status(measures_payload)
 
         objectives_payload.append({
-            "id": str(objective.id),
-            "code": objective.code,
-            "name": objective.name,
-            "sra": {
-                "id": str(objective_sra.id) if objective_sra else None,
-                "code": objective_sra.code if objective_sra else None,
-                "name": objective_sra.name if objective_sra else None,
+            "id": str(card.id),
+            "document_id": str(card.document_id),
+            "code": card.code,
+            "name": card.name,
+            "node_type": card.template_node_type.name,
+            "group": {
+                "id": str(objective_group.id) if objective_group else None,
+                "code": objective_group.code if objective_group else None,
+                "name": objective_group.name if objective_group else None,
                 "label": (
-                    f"{objective_sra.code} {objective_sra.name}"
-                    if objective_sra
+                    format_item_label(objective_group)
+                    if objective_group
                     else None
                 ),
             },
@@ -426,6 +444,39 @@ def get_dashboard_summary(search=None, sra=None, status=None):
             "main_status_label": status_label(objective_status),
             "measures": measures_payload,
         })
+
+    for objective in objectives_payload:
+        objective["sra"] = objective["group"]
+
+    group_options_map = {}
+    for objective in objectives_payload:
+        objective_group = objective["group"]
+        group_id = objective_group["id"]
+
+        if group_id and group_id not in group_options_map:
+            group_options_map[group_id] = {
+                "value": group_id,
+                "label": objective_group["label"],
+            }
+
+    group_options = sorted(
+        group_options_map.values(),
+        key=lambda option: option["label"],
+    )
+    all_card_node_types = {
+        objective["node_type"]
+        for objective in objectives_payload
+    }
+    all_measure_node_types = {
+        measure["node_type"]
+        for objective in objectives_payload
+        for measure in objective["measures"]
+    }
+    all_group_node_types = {
+        card_groups[card.id].template_node_type.name
+        for card in cards_map.values()
+        if card_groups.get(card.id)
+    }
 
     if search:
         needle = search.lower()
@@ -438,10 +489,10 @@ def get_dashboard_summary(search=None, sra=None, status=None):
             )
         ]
 
-    if sra:
+    if group_filter:
         objectives_payload = [
             objective for objective in objectives_payload
-            if objective["sra"]["id"] == sra
+            if objective["group"]["id"] == group_filter
         ]
 
     if status:
@@ -474,6 +525,18 @@ def get_dashboard_summary(search=None, sra=None, status=None):
         else 0
     )
 
+    selected_document = document is not None
+
+    def flexible_label(names, fallback):
+        if selected_document and len(names) == 1:
+            return next(iter(names))
+
+        return fallback
+
+    group_filter_label = flexible_label(all_group_node_types, "Group")
+    card_label = flexible_label(all_card_node_types, "Dashboard Item")
+    measure_label = flexible_label(all_measure_node_types, "Measure")
+
     return {
         "measures": len(all_measures),
         "objectives": len(objectives_payload),
@@ -481,7 +544,18 @@ def get_dashboard_summary(search=None, sra=None, status=None):
         "overall_progress": overall_progress,
         "status_counts": status_counts,
         **status_counts,
-        "sra_options": sra_options,
+        "document_options": [
+            {
+                "value": str(active_document.id),
+                "label": active_document.name,
+            }
+            for active_document in active_documents
+        ],
+        "group_options": group_options,
+        "group_filter_label": group_filter_label,
+        "card_label": card_label,
+        "measure_label": measure_label,
+        "sra_options": group_options,
         "status_options": [
             {"value": key, "label": label}
             for key, label in DASHBOARD_STATUSES

@@ -41,7 +41,6 @@
         </q-td>
       </template>
 
-
       <!-- ACTIONS -->
       <template #body-cell-actions="props">
         <div class="row full-width items-center justify-center no-wrap">
@@ -58,85 +57,298 @@
       </template>
     </AppTable>
 
+    <!-- VIEW USER PERMISSIONS -->
     <q-dialog v-model="showViewDialog">
-      <q-card class="dialog-form">
-        <q-card-section class="row items-center justify-between">
-          <div class="text-h6">User Permissions</div>
+      <q-card class="permission-dialog">
+        <q-card-section class="row items-center no-wrap q-gutter-sm">
+          <div class="permission-dialog__icon">
+            <ShieldCheck :size="20" :stroke-width="2" />
+          </div>
+          <div class="col min-w-0">
+            <div class="text-h6 leading-snug ellipsis">{{ formatUserName(selectedUser) }}</div>
+            <div class="text-caption text-grey-7 ellipsis">{{ selectedUser?.email }}</div>
+          </div>
           <q-btn icon="close" flat round dense v-close-popup />
         </q-card-section>
 
         <q-separator />
 
-        <q-card-section>
-          <div class="text-subtitle2">{{ formatUserName(selectedUser) }}</div>
-          <div class="text-caption text-grey-7 q-mb-md">{{ selectedUser?.email }}</div>
+        <q-card-section class="q-gutter-md">
+          <div class="perm-toolbar row items-center gap-2">
+            <q-btn-toggle
+              v-model="groupMode"
+              :options="groupModeOptions"
+              unelevated
+              no-caps
+              class="rounded-md"
+              toggle-color="primary"
+              color="grey-2"
+              text-color="grey-8"
+            />
 
-          <div class="text-weight-medium q-mb-sm">Direct Permissions</div>
-          <div class="row q-col-gutter-sm q-mb-md">
-            <div
-              v-for="permission in selectedUser?.direct_permission_details || []"
-              :key="permission.id"
-              class="col-12 col-sm-6"
+            <q-input
+              v-model="viewSearch"
+              dense
+              outlined
+              clearable
+              placeholder="Search permissions"
+              class="col"
             >
-              <q-chip color="teal-1" text-color="teal-9" class="full-width">
-                {{ permission.permission }}
-              </q-chip>
-            </div>
-            <div v-if="!selectedUser?.direct_permission_details?.length" class="col-12 text-grey-7">
-              No direct permissions assigned.
-            </div>
+              <template #prepend>
+                <Search :size="16" :stroke-width="2" class="text-grey-6" />
+              </template>
+            </q-input>
           </div>
 
-          <div class="text-weight-medium q-mb-sm">Effective Permissions</div>
-          <div class="row q-col-gutter-sm">
-            <div
-              v-for="permission in selectedUser?.effective_permissions || []"
-              :key="permission"
-              class="col-12 col-sm-6"
-            >
-              <q-chip color="blue-1" text-color="blue-9" class="full-width">
-                {{ permission }}
-              </q-chip>
-            </div>
-            <div v-if="!selectedUser?.effective_permissions?.length" class="col-12 text-grey-7">
-              No effective permissions assigned.
-            </div>
-          </div>
+          <q-tabs
+            v-model="viewTab"
+            dense
+            no-caps
+            align="left"
+            active-color="primary"
+            indicator-color="primary"
+            class="text-grey-7"
+          >
+            <q-tab name="direct" :label="`Direct (${directCount})`" />
+            <q-tab name="effective" :label="`Effective (${effectiveCount})`" />
+          </q-tabs>
+
+          <q-separator />
+
+          <q-tab-panels v-model="viewTab" animated class="permission-tab-panels">
+            <q-tab-panel name="direct" class="q-pa-none q-pt-md">
+              <div class="perm-scroll">
+                <div v-for="group in directGroups" :key="group.key" class="perm-group q-mb-md">
+                  <div class="perm-group__header row items-center no-wrap">
+                    <component :is="groupIcon" :size="16" :stroke-width="2" class="text-primary" />
+                    <div class="col text-weight-semibold q-ml-sm">{{ group.label }}</div>
+                    <q-chip dense square color="teal-1" text-color="teal-9">
+                      {{ group.permissions.length }}
+                    </q-chip>
+                  </div>
+
+                  <div class="perm-group__body row q-col-gutter-sm">
+                    <div
+                      v-for="permission in group.permissions"
+                      :key="permission.id"
+                      class="col-12 col-sm-6"
+                    >
+                      <div class="perm-row perm-row--readonly row items-center no-wrap">
+                        <div class="perm-check">
+                          <Check :size="13" :stroke-width="3" />
+                        </div>
+                        <div class="col min-w-0 q-ml-sm">
+                          <div class="perm-name ellipsis">{{ permission.name }}</div>
+                          <!-- <div
+                            v-if="
+                              permission.permission && permission.permission !== permission.name
+                            "
+                            class="perm-code text-grey-6 ellipsis"
+                          >
+                            {{ permission.permission }}
+                          </div> -->
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  v-if="!directGroups.length"
+                  class="perm-empty column items-center justify-center text-grey-6"
+                >
+                  <ShieldOff :size="28" :stroke-width="1.5" />
+                  <div class="q-mt-sm text-caption">
+                    {{
+                      directCount
+                        ? 'No permissions match your search.'
+                        : 'No direct permissions assigned.'
+                    }}
+                  </div>
+                </div>
+              </div>
+            </q-tab-panel>
+
+            <q-tab-panel name="effective" class="q-pa-none q-pt-md">
+              <div class="perm-scroll">
+                <div v-for="group in effectiveGroups" :key="group.key" class="perm-group q-mb-md">
+                  <div class="perm-group__header row items-center no-wrap">
+                    <component :is="groupIcon" :size="16" :stroke-width="2" class="text-primary" />
+                    <div class="col text-weight-semibold q-ml-sm">{{ group.label }}</div>
+                    <q-chip dense square color="blue-1" text-color="blue-9">
+                      {{ group.permissions.length }}
+                    </q-chip>
+                  </div>
+
+                  <div class="perm-group__body row q-col-gutter-sm">
+                    <div
+                      v-for="permission in group.permissions"
+                      :key="permission.id"
+                      class="col-12 col-sm-6"
+                    >
+                      <div class="perm-row perm-row--readonly row items-center no-wrap">
+                        <div class="perm-check perm-check--blue">
+                          <Check :size="13" :stroke-width="3" />
+                        </div>
+                        <div class="col min-w-0 q-ml-sm">
+                          <div class="perm-name ellipsis">{{ permission.name }}</div>
+                          <!-- <div
+                            v-if="
+                              permission.permission && permission.permission !== permission.name
+                            "
+                            class="perm-code text-grey-6 ellipsis"
+                          >
+                            {{ permission.permission }}
+                          </div> -->
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  v-if="!effectiveGroups.length"
+                  class="perm-empty column items-center justify-center text-grey-6"
+                >
+                  <ShieldOff :size="28" :stroke-width="1.5" />
+                  <div class="q-mt-sm text-caption">
+                    {{
+                      effectiveCount
+                        ? 'No permissions match your search.'
+                        : 'No effective permissions assigned.'
+                    }}
+                  </div>
+                </div>
+              </div>
+            </q-tab-panel>
+          </q-tab-panels>
         </q-card-section>
       </q-card>
     </q-dialog>
 
+    <!-- EDIT DIRECT PERMISSIONS -->
     <q-dialog v-model="showEditDialog">
-      <q-card class="dialog-form">
-        <q-card-section class="row items-center justify-between">
-          <div class="text-h6">Edit Permissions</div>
+      <q-card class="permission-dialog">
+        <q-card-section class="row items-center no-wrap q-gutter-sm">
+          <div class="permission-dialog__icon">
+            <UserCog :size="20" :stroke-width="2" />
+          </div>
+          <div class="col min-w-0">
+            <div class="text-h6 leading-snug ellipsis">Edit Direct Permissions</div>
+            <div class="text-caption text-grey-7 ellipsis">
+              {{ formatUserName(selectedUser) }} | {{ selectedUser?.email }}
+            </div>
+          </div>
           <q-btn icon="close" flat round dense v-close-popup />
         </q-card-section>
 
         <q-separator />
 
-        <q-card-section>
-          <div class="text-subtitle2">{{ formatUserName(selectedUser) }}</div>
-          <div class="text-caption text-grey-7 q-mb-md">{{ selectedUser?.email }}</div>
+        <q-card-section class="q-gutter-md">
+          <div class="perm-toolbar row items-center gap-2">
+            <q-btn-toggle
+              v-model="groupMode"
+              :options="groupModeOptions"
+              unelevated
+              no-caps
+              class="rounded-md"
+              toggle-color="primary"
+              color="grey-2"
+              text-color="grey-8"
+            />
 
-          <q-select
-            v-model="permissionForm.permissionIds"
-            v-model:input-value="permissionSearch"
-            :options="filteredPermissionOptions"
-            option-value="value"
-            option-label="label"
-            emit-value
-            map-options
-            multiple
-            use-chips
-            use-input
-            input-debounce="250"
-            label="Direct Permissions"
-            outlined
-            dense
-            @filter="filterPermissions"
-            @update:model-value="permissionSearch = ''"
-          />
+            <q-input
+              v-model="editSearch"
+              dense
+              outlined
+              clearable
+              placeholder="Search permissions"
+              class="col"
+            >
+              <template #prepend>
+                <Search :size="16" :stroke-width="2" class="text-grey-6" />
+              </template>
+            </q-input>
+          </div>
+
+          <div class="row items-center justify-between q-gutter-sm">
+            <div>
+              <q-btn
+                flat
+                no-caps
+                size="md"
+                color="primary"
+                icon="done_all"
+                label="Select all"
+                @click="selectAllVisible"
+              />
+              <q-btn
+                flat
+                no-caps
+                size="md"
+                color="grey-8"
+                icon="remove_done"
+                label="Clear all"
+                @click="clearAllVisible"
+              />
+            </div>
+
+            <q-chip text-color="primary" class="text-weight-medium">
+              {{ selectedCount }} / {{ totalCount }} selected
+            </q-chip>
+          </div>
+
+          <div class="perm-scroll">
+            <div v-for="group in editGroups" :key="group.key" class="perm-group q-mb-md">
+              <div class="perm-group__header row items-center no-wrap">
+                <component :is="groupIcon" :size="16" :stroke-width="2" class="text-primary" />
+                <div class="col text-weight-semibold q-ml-sm">{{ group.label }}</div>
+                <q-chip dense square color="grey-2" text-color="grey-8" class="q-mr-sm">
+                  {{ groupSelectedCount(group) }} / {{ group.permissions.length }}
+                </q-chip>
+                <q-toggle
+                  :model-value="groupAllSelected(group)"
+                  color="primary"
+                  :aria-label="`Toggle all ${group.label} permissions`"
+                  @update:model-value="(val) => toggleGroup(group, val)"
+                />
+              </div>
+
+              <div class="perm-group__body row q-col-gutter-sm">
+                <div
+                  v-for="permission in group.permissions"
+                  :key="permission.id"
+                  class="col-12 col-sm-6"
+                >
+                  <div
+                    class="perm-row row items-center no-wrap cursor-pointer"
+                    :class="{ 'perm-row--active': isSelected(permission.id) }"
+                    @click="setPermission(permission.id, !isSelected(permission.id))"
+                  >
+                    <div class="col min-w-0">
+                      <div class="perm-name ellipsis">{{ permission.name }}</div>
+                      <div class="perm-code text-grey-6 ellipsis">{{ permission.permission }}</div>
+                    </div>
+                    <q-toggle
+                      :model-value="isSelected(permission.id)"
+                      color="primary"
+                      :aria-label="permission.name"
+                      @update:model-value="(val) => setPermission(permission.id, val)"
+                      @click.stop
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div
+              v-if="!editGroups.length"
+              class="perm-empty column items-center justify-center text-grey-6"
+            >
+              <SearchX :size="28" :stroke-width="1.5" />
+              <div class="q-mt-sm text-caption">No permissions match your search.</div>
+            </div>
+          </div>
         </q-card-section>
 
         <q-separator />
@@ -161,7 +373,16 @@ import PageComboHeader from 'src/components/PageComboHeader.vue'
 import AppTable from 'src/components/admin/MarkupTable.vue'
 import { usePermissionStore } from 'src/stores/permission'
 import { useUserStore } from 'src/stores/user'
-import { Eye, UserCog } from 'lucide-vue-next'
+import {
+  Eye,
+  UserCog,
+  ShieldCheck,
+  ShieldOff,
+  FileText,
+  Search,
+  SearchX,
+  Check,
+} from 'lucide-vue-next'
 import { notify } from 'src/utils/notify'
 
 const permissionStore = usePermissionStore()
@@ -170,20 +391,29 @@ const userStore = useUserStore()
 const selectedUser = ref(null)
 const showViewDialog = ref(false)
 const showEditDialog = ref(false)
-const permissionSearch = ref('')
-const filteredPermissionOptions = ref([])
+
+const groupMode = ref('module')
+const viewTab = ref('direct')
+const viewSearch = ref('')
+const editSearch = ref('')
+
 const permissionForm = reactive({
   permissionIds: [],
 })
 
+const groupModeOptions = [
+  { label: 'By Module', value: 'module', icon: 'widgets' },
+  { label: 'By Page', value: 'page', icon: 'description' },
+]
+
 const columns = [
-  { name: 'name', label: 'Full Name', field: row => formatUserName(row), align: 'left' },
+  { name: 'name', label: 'Full Name', field: (row) => formatUserName(row), align: 'left' },
   { name: 'email', label: 'Email', field: 'email', align: 'left' },
-  { name: 'roles', label: 'Roles', field: row => row.roles?.join(', ') || '-', align: 'left' },
+  { name: 'roles', label: 'Roles', field: (row) => row.roles?.join(', ') || '-', align: 'left' },
   {
     name: 'direct_permissions',
     label: 'Direct',
-    field: row => row.direct_permission_ids?.length || 0,
+    field: (row) => row.direct_permission_ids?.length || 0,
     align: 'center',
   },
   {
@@ -195,10 +425,61 @@ const columns = [
   { name: 'actions', label: 'Actions', field: 'actions', align: 'center' },
 ]
 
-const permissionOptions = computed(() => permissionStore.permissions.map((permission) => ({
-  label: `${permission.permission} - ${permission.name}`,
-  value: permission.id,
-})))
+const groupIcon = computed(() => (groupMode.value === 'module' ? ShieldCheck : FileText))
+
+const totalCount = computed(() => permissionStore.permissions.length)
+const selectedCount = computed(() => permissionForm.permissionIds.length)
+const directCount = computed(() => selectedUser.value?.direct_permission_details?.length || 0)
+const effectiveCount = computed(() => selectedUser.value?.effective_permissions?.length || 0)
+
+const permissionByCode = computed(() => {
+  const map = new Map()
+  for (const permission of permissionStore.permissions) {
+    map.set(permission.permission, permission)
+  }
+  return map
+})
+
+function enrichCodes(codes) {
+  return codes.map((code) => {
+    const found = permissionByCode.value.get(code)
+    if (found) return found
+
+    const [appLabel, ...rest] = code.split('.')
+    return {
+      id: code,
+      permission: code,
+      name: code,
+      codename: rest.join('.'),
+      app_label: appLabel || 'other',
+      model: 'other',
+    }
+  })
+}
+
+const directGroups = computed(() =>
+  groupPermissions(
+    selectedUser.value?.direct_permission_details || [],
+    groupMode.value,
+    viewSearch.value,
+  ),
+)
+
+const effectiveGroups = computed(() =>
+  groupPermissions(
+    enrichCodes(selectedUser.value?.effective_permissions || []),
+    groupMode.value,
+    viewSearch.value,
+  ),
+)
+
+const editGroups = computed(() =>
+  groupPermissions(permissionStore.permissions, groupMode.value, editSearch.value),
+)
+
+const visibleEditIds = computed(() =>
+  editGroups.value.flatMap((group) => group.permissions.map((permission) => permission.id)),
+)
 
 function formatUserName(user) {
   const profile = user?.profile || {}
@@ -206,24 +487,97 @@ function formatUserName(user) {
   return fullName || user?.email || '-'
 }
 
-function filterPermissions(value, update) {
-  update(() => {
-    const needle = value.toLowerCase()
-    filteredPermissionOptions.value = permissionOptions.value.filter((permission) => (
-      permission.label.toLowerCase().includes(needle)
-    ))
-  })
+function formatGroupName(key) {
+  if (!key) return 'Other'
+  return key.replace(/[_-]+/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase())
+}
+
+function groupPermissions(list, mode, search = '') {
+  const field = mode === 'module' ? 'app_label' : 'model'
+  const needle = search.trim().toLowerCase()
+  const groups = new Map()
+
+  for (const permission of list) {
+    if (needle) {
+      const haystack =
+        `${permission.name} ${permission.permission} ${permission.codename}`.toLowerCase()
+      if (!haystack.includes(needle)) continue
+    }
+
+    const key = permission[field] || 'other'
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key).push(permission)
+  }
+
+  return [...groups.entries()]
+    .map(([key, permissions]) => ({
+      key,
+      label: formatGroupName(key),
+      permissions: permissions.slice().sort((a, b) => a.name.localeCompare(b.name)),
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label))
+}
+
+function isSelected(id) {
+  return permissionForm.permissionIds.includes(id)
+}
+
+function setPermission(id, value) {
+  const has = permissionForm.permissionIds.includes(id)
+  if (value && !has) {
+    permissionForm.permissionIds = [...permissionForm.permissionIds, id]
+  } else if (!value && has) {
+    permissionForm.permissionIds = permissionForm.permissionIds.filter(
+      (permissionId) => permissionId !== id,
+    )
+  }
+}
+
+function groupSelectedCount(group) {
+  return group.permissions.reduce(
+    (count, permission) => count + (isSelected(permission.id) ? 1 : 0),
+    0,
+  )
+}
+
+function groupAllSelected(group) {
+  return (
+    group.permissions.length > 0 &&
+    group.permissions.every((permission) => isSelected(permission.id))
+  )
+}
+
+function toggleGroup(group, value) {
+  const ids = new Set(permissionForm.permissionIds)
+  for (const permission of group.permissions) {
+    if (value) ids.add(permission.id)
+    else ids.delete(permission.id)
+  }
+  permissionForm.permissionIds = [...ids]
+}
+
+function selectAllVisible() {
+  const ids = new Set(permissionForm.permissionIds)
+  for (const id of visibleEditIds.value) ids.add(id)
+  permissionForm.permissionIds = [...ids]
+}
+
+function clearAllVisible() {
+  const visible = new Set(visibleEditIds.value)
+  permissionForm.permissionIds = permissionForm.permissionIds.filter((id) => !visible.has(id))
 }
 
 function handleView(row) {
   selectedUser.value = row
+  viewSearch.value = ''
+  viewTab.value = 'direct'
   showViewDialog.value = true
 }
 
 function handleEdit(row) {
   selectedUser.value = row
   permissionForm.permissionIds = [...(row.direct_permission_ids || [])]
-  filteredPermissionOptions.value = permissionOptions.value
+  editSearch.value = ''
   showEditDialog.value = true
 }
 
@@ -246,11 +600,7 @@ async function handleSubmit() {
 
 onMounted(async () => {
   try {
-    await Promise.all([
-      userStore.fetchUsers(),
-      permissionStore.fetchPermissions(),
-    ])
-    filteredPermissionOptions.value = permissionOptions.value
+    await Promise.all([userStore.fetchUsers(), permissionStore.fetchPermissions()])
   } catch {
     notify.negative('Failed to load user permissions. Please try again.')
   }
