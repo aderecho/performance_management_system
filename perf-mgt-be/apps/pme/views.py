@@ -370,7 +370,14 @@ class DashboardSummaryView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        template = request.query_params.get("template")
         document = request.query_params.get("document")
+
+        if template:
+            try:
+                UUID(template)
+            except ValueError:
+                raise ValidationError({"template": "Invalid template id."})
 
         if document:
             try:
@@ -383,6 +390,7 @@ class DashboardSummaryView(APIView):
             group=request.query_params.get("group"),
             sra=request.query_params.get("sra"),
             status=request.query_params.get("status"),
+            template=template,
             document=document,
         ))
     

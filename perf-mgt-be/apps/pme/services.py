@@ -69,11 +69,14 @@ def build_document_item(
 
     # Resolve allowed items based on contributor
     allowed_item_ids = None
+    submit_item_ids = set()
+    can_submit_all_items = False
 
     if request and request.user.is_authenticated:
         # Superusers can see all items - skip filtering
         if request.user.is_superuser:
             allowed_item_ids = None
+            can_submit_all_items = True
 
         else:
             try:
@@ -89,6 +92,7 @@ def build_document_item(
                         contributors__unit_id=user_unit.unit_id
                     ).values_list("id", flat=True)
                 )
+                submit_item_ids = set(allowed_item_ids)
 
             except UserUnit.DoesNotExist:
                 allowed_item_ids = set()
@@ -196,6 +200,12 @@ def build_document_item(
             total += getattr(child, "total_accomplishment", 0)
 
         node.total_accomplishment = total
+        node.can_submit_initiative = bool(
+            node.target and (
+                can_submit_all_items
+                or node.id in submit_item_ids
+            )
+        )
 
         if node.target:
             node.percent_achieved = round(
@@ -298,15 +308,22 @@ def get_objective_status(measures):
 
 
 # DASHBOARD OVERALL SUMMARY
-def get_dashboard_summary(search=None, sra=None, status=None, document=None, group=None):
+def get_dashboard_summary(search=None, sra=None, status=None, document=None, group=None, template=None):
     today = timezone.localdate()
     group_filter = group or sra
 
-    active_documents = Document.objects.filter(status=1).order_by("name")
+    active_documents_base = Document.objects.filter(status=1).select_related("template").order_by("name")
+    active_documents = active_documents_base
+    if template:
+        active_documents = active_documents.filter(template_id=template)
+
     item_qs = Item.objects.filter(
         document__status=1,
         status=1,
     )
+
+    if template:
+        item_qs = item_qs.filter(document__template_id=template)
 
     if document:
         item_qs = item_qs.filter(document_id=document)
@@ -534,8 +551,21 @@ def get_dashboard_summary(search=None, sra=None, status=None, document=None, gro
         return fallback
 
     group_filter_label = flexible_label(all_group_node_types, "Group")
-    card_label = flexible_label(all_card_node_types, "Dashboard Item")
+    card_label = flexible_label(all_card_node_types, "Documents")
     measure_label = flexible_label(all_measure_node_types, "Measure")
+
+    template_options_map = {
+        active_document.template_id: {
+            "value": str(active_document.template_id),
+            "label": active_document.template.name,
+        }
+        for active_document in active_documents_base
+    }
+
+    template_options = sorted(
+        template_options_map.values(),
+        key=lambda option: option["label"],
+    )
 
     return {
         "measures": len(all_measures),
@@ -548,9 +578,12 @@ def get_dashboard_summary(search=None, sra=None, status=None, document=None, gro
             {
                 "value": str(active_document.id),
                 "label": active_document.name,
+                "template": str(active_document.template_id),
+                "template_label": active_document.template.name,
             }
             for active_document in active_documents
         ],
+        "template_options": template_options,
         "group_options": group_options,
         "group_filter_label": group_filter_label,
         "card_label": card_label,

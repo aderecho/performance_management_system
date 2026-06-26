@@ -8,7 +8,7 @@
 
     <DashboardFilters
       v-model="filters"
-      :search-placeholder="searchPlaceholder"
+      :show-search="false"
       :select-filters="dashboardFilterFields"
       @change="fetchDashboard"
     />
@@ -17,7 +17,12 @@
     <q-card flat bordered class="bg-white shadow-1 q-mb-md rounded-4xl">
       <q-card-section class="q-pa-md">
         <div class="q-mb-md">
-          <div class="text-h6 text-weight-bold text-dark">Overall Summary</div>
+          <div class="text-h6 text-weight-bold text-dark">
+            <template v-if="selectedTemplateLabel">
+              Overall <span class="text-primary">{{ selectedTemplateLabel }}</span> Summary
+            </template>
+            <template v-else>Overall Summary</template>
+          </div>
           <div class="text-caption text-blue-grey-8">
             Status distribution and overall implementation progress
           </div>
@@ -77,13 +82,13 @@
       </q-card-section>
     </q-card>
 
-    <!-- OBJECTIVE SUMMARY -->
+    <!-- DOCUMENT SUMMARY -->
     <q-card flat bordered class="bg-white shadow-1 rounded-4xl q-mb-md">
       <q-card-section class="q-pa-md">
         <div class="q-mb-md">
-          <div class="text-h6 text-weight-bold text-dark">{{ cardLabel }} Summary</div>
+          <div class="text-h6 text-weight-bold text-dark">{{ cardSummaryTitle }}</div>
           <div class="text-caption text-blue-grey-8">
-            Search and filter {{ cardLabelPluralLower }} by {{ groupFilterLabel }} or implementation status
+            Filter {{ cardLabelPluralLower }} by {{ groupFilterLabel }} or implementation status
           </div>
         </div>
 
@@ -105,7 +110,7 @@
                 <div class="row items-center justify-between no-wrap q-mb-sm">
                   <div class="q-pr-md min-w-0">
                     <div class="text-subtitle1 text-weight-bold text-dark">
-                      {{ cardLabel }} {{ objective.code }}: {{ objective.name }}
+                      {{ objective.code }}: {{ objective.name }}
                     </div>
                     <div class="text-caption text-blue-grey-8 text-weight-medium">
                       {{ objective.group?.label || `No ${groupFilterLabel}` }}
@@ -237,11 +242,12 @@ import { notify } from 'src/utils/notify'
 const dashboardStore = useDashboardStore()
 
 const filters = ref({
-  search: null,
+  template: null,
   document: null,
   group: null,
   status: null,
 })
+const lastTemplate = ref(filters.value.template)
 const lastDocument = ref(filters.value.document)
 
 const statusConfig = [
@@ -253,7 +259,16 @@ const statusConfig = [
 
 const summary = computed(() => dashboardStore.dashboardSummary || {})
 const objectives = computed(() => summary.value.objectives_list || [])
-const documentOptions = computed(() => summary.value.document_options || [])
+const templateOptions = computed(() => summary.value.template_options || [])
+const documentOptions = computed(() => {
+  const options = summary.value.document_options || []
+
+  if (!filters.value.template) {
+    return options
+  }
+
+  return options.filter((option) => option.template === filters.value.template)
+})
 const groupOptions = computed(() => summary.value.group_options || summary.value.sra_options || [])
 const groupFilterLabel = computed(() => summary.value.group_filter_label || 'Strategic Result Area')
 const cardLabel = computed(() => summary.value.card_label || 'Objective')
@@ -261,9 +276,8 @@ const measureLabel = computed(() => summary.value.measure_label || 'Performance 
 const cardLabelPlural = computed(() => pluralize(cardLabel.value))
 const cardLabelPluralLower = computed(() => cardLabelPlural.value.toLowerCase())
 const measureLabelPlural = computed(() => pluralize(measureLabel.value))
-const searchPlaceholder = computed(
-  () => `Search ${cardLabel.value.toLowerCase()} or ${measureLabel.value.toLowerCase()}...`,
-)
+const selectedTemplateLabel = computed(() => optionLabel(templateOptions.value, filters.value.template))
+const cardSummaryTitle = computed(() => `${cardLabel.value} Summary`)
 const statusOptions = computed(
   () =>
     summary.value.status_options ||
@@ -273,6 +287,12 @@ const statusOptions = computed(
     })),
 )
 const dashboardFilterFields = computed(() => [
+  {
+    name: 'template',
+    label: 'Template',
+    options: templateOptions.value,
+    colClass: 'col-12 col-md-3',
+  },
   {
     name: 'document',
     label: 'Document',
@@ -289,7 +309,7 @@ const dashboardFilterFields = computed(() => [
     name: 'status',
     label: 'Status',
     options: statusOptions.value,
-    colClass: 'col-12 col-md-2',
+    colClass: 'col-12 col-md-3',
   },
 ])
 
@@ -353,6 +373,14 @@ function pluralize(label) {
   return label.endsWith('s') ? label : `${label}s`
 }
 
+function optionLabel(options, value) {
+  if (!value) {
+    return ''
+  }
+
+  return options.find((option) => option.value === value)?.label || ''
+}
+
 function measureCountLabel(count) {
   return (Number(count) === 1 ? measureLabel.value : measureLabelPlural.value).toLowerCase()
 }
@@ -389,24 +417,28 @@ function objectiveProgressItems(objective) {
 }
 
 async function fetchDashboard(nextFilters = filters.value) {
-  const nextDocument = nextFilters.document || null
+  const nextTemplate = nextFilters.template || null
+  const templateChanged = nextTemplate !== lastTemplate.value
+  const nextDocument = templateChanged ? null : nextFilters.document || null
   const documentChanged = nextDocument !== lastDocument.value
-  const selectedGroup = documentChanged ? null : nextFilters.group
+  const selectedGroup = templateChanged || documentChanged ? null : nextFilters.group
 
-  if (documentChanged && nextFilters.group) {
+  if (templateChanged || nextDocument !== nextFilters.document || selectedGroup !== nextFilters.group) {
     filters.value = {
       ...nextFilters,
-      group: null,
+      document: nextDocument,
+      group: selectedGroup,
     }
   }
 
   try {
     await dashboardStore.fetchDashboardSummary({
-      search: nextFilters.search || undefined,
-      document: nextFilters.document || undefined,
+      template: nextTemplate || undefined,
+      document: nextDocument || undefined,
       group: selectedGroup || undefined,
       status: nextFilters.status || undefined,
     })
+    lastTemplate.value = nextTemplate
     lastDocument.value = nextDocument
   } catch {
     notify.negative('Failed to load dashboard summary. Please try again.')

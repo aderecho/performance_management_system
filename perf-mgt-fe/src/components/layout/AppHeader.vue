@@ -1,17 +1,17 @@
 <template>
   <q-header elevated class="bg-surface text-primary min-h-64 items-center" height-hint="64">
     <q-toolbar class="GNL__toolbar min-h-64 items-center">
-
       <q-btn
+        v-if="$q.screen.lt.md"
         flat dense round
         icon="menu"
         color="white"
         class="q-mr-sm"
+        aria-label="Open navigation drawer"
         @click="$emit('toggle-drawer')"
       />
 
       <q-toolbar-title
-        v-if="$q.screen.gt.xs"
         shrink
         class="row items-center no-wrap text-white text-weight-bold q-ml-sm"
       >

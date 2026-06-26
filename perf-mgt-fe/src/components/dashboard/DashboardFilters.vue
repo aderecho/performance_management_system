@@ -1,6 +1,6 @@
 <template>
     <div class="row q-col-gutter-sm q-mb-md">
-        <div class="col-12 col-md">
+        <div v-if="showSearch" class="col-12 col-md">
             <q-input
                 v-model="local.search"
                 class="rounded-2xl"
@@ -49,6 +49,10 @@ const props = defineProps({
         type: String,
         default: 'Search objective or performance measure...',
     },
+    showSearch: {
+        type: Boolean,
+        default: true,
+    },
     selectFilters: { type: Array, default: () => [] },
 })
 
@@ -59,7 +63,7 @@ const local = reactive({
 })
 
 const filterNames = computed(() => [
-    'search',
+    ...(props.showSearch ? ['search'] : []),
     ...props.selectFilters.map((filter) => filter.name),
 ])
 
