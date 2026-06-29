@@ -21,6 +21,39 @@ export const useAuthStore = defineStore('authStore', {
 
     hasPermission: (state) => (permission) =>
       state.permissions.includes(permission),
+
+    hasAnyRole: (state) => (roles) =>
+      roles.some((role) => state.roles.includes(role)),
+
+    hasAllPermissions: (state) => (permissions) =>
+      permissions.every((permission) => state.permissions.includes(permission)),
+
+    canAccess: (state) => (meta = {}) => {
+      if (!state.user) return false
+      if (state.user?.is_superadmin === true) return true
+      if (meta.requiresSuperAdmin) return false
+
+      const normalize = (value) => {
+        if (!value) return []
+        return Array.isArray(value) ? value : [value]
+      }
+
+      const requiredRoles = normalize(meta.requiredRoles || meta.requiredRole)
+      const requiredPermissions = normalize(meta.requiredPermissions || meta.requiredPermission)
+
+      if (requiredRoles.length && !requiredRoles.some((role) => state.roles.includes(role))) {
+        return false
+      }
+
+      if (
+        requiredPermissions.length &&
+        !requiredPermissions.every((permission) => state.permissions.includes(permission))
+      ) {
+        return false
+      }
+
+      return true
+    },
   },
 
   actions: {

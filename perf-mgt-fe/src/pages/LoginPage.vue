@@ -96,7 +96,7 @@ const onSubmit = handleSubmit(async (values) => {
     await authStore.login(values.username, values.password)
     notify.positive(`Welcome back, ${values.username}!`)
     resetForm()
-    router.push('/dashboard')
+    router.push('/admin/dashboard')
   } catch {
     notify.negative('Unable to sign in. Please check your credentials and try again.')
   }

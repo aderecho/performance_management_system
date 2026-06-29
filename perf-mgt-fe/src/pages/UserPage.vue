@@ -2,7 +2,7 @@
     <div class="q-pa-md">
 
         <PageComboHeader title="User Management" :breadcrumbs="[
-            { label: 'Home', to: '/dashboard' },
+            { label: 'Home', to: '/admin/dashboard' },
             { label: 'Admin' },
             { label: 'User Management' }
         ]" :buttons="buttons" :show-filter="false" />
@@ -35,6 +35,24 @@
             @view="handleView" @edit="handleEdit" @delete="handleDelete">
             <template #filters>
                 <UserFilters v-model="filters" @change="handleFilter" />
+            </template>
+
+            <template #body-cell-roles="props"> 
+                <q-td :props="props">
+                    <div class="row items-center gap-2">
+                        <q-chip
+                            v-for="role in props.row.roles || []"
+                            :key="role"
+                            color="blue-1"
+                            text-color="blue-9"
+                            class="text-weight-medium"
+                            dense
+                        >
+                            {{ role }}
+                        </q-chip>
+                        <span v-if="!props.row.roles?.length">-</span>
+                    </div>
+                </q-td>
             </template>
 
             <template #body-cell-actions="props">
@@ -97,6 +115,7 @@ const columns = [
     { name: 'name', label: 'Full Name', field: row => row.profile.last_name + ', ' + row.profile.first_name, align: 'left' },
     { name: 'email', label: 'Email', field: 'email', align: 'left' },
     { name: 'primary_unit', label: 'Primary Unit', field: row => row.primary_unit, align: 'left' },
+    { name: 'roles', label: 'Roles', field: row => row.roles?.join(', ') || '-', align: 'left' },
     { name: 'is_active', label: 'Status', field: 'is_active', align: 'center' },
     { name: 'is_superuser', label: 'Super User', field: 'is_superuser', align: 'center' },
     { name: 'actions', label: 'Actions', field: 'actions', align: 'center' }
@@ -125,7 +144,7 @@ const userFields = [
         key: 'is_active',
         type: 'badge',
         badge: (val) => ({
-            label: val ? 'Active' : 'Suspended',
+            label: val ? 'Active' : 'Deactivated',
             color: val ? 'positive' : 'negative'
         })
     },
@@ -143,6 +162,12 @@ const userFields = [
     {
         label: 'Primary Unit',
         key: 'primary_unit'
+    },
+
+    {
+        label: 'Roles',
+        key: 'roles',
+        format: (val) => val?.length ? val.join(', ') : '-'
     },
 
     {
@@ -217,6 +242,7 @@ async function handleSubmit(formData) {
             email: formData.email,
             is_active: formData.is_active,
             is_superuser: formData.is_superuser,
+            role_ids: formData.role_ids,
 
             profile: {
                 first_name: formData.profile.first_name,

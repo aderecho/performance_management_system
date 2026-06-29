@@ -1,22 +1,56 @@
 
 from rest_framework import status
-from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
+from rest_framework.permissions import IsAuthenticated, AllowAny, BasePermission
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework import viewsets, status
+from rest_framework import viewsets
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth import authenticate
+from django.contrib.auth.models import Group, Permission
 from django.http import JsonResponse
 
 from .authentication import CookieJWTAuthentication
 
-from .serializers import UserSerializer, UserCreateSerializer, UserUpdateSerializer
+from .serializers import (
+    PermissionSerializer,
+    RoleSerializer,
+    UserSerializer,
+    UserCreateSerializer,
+    UserUpdateSerializer,
+)
 from .services import UserDashboardService
 
 User = get_user_model()
+
+
+class IsSuperuserOrActionPermission(BasePermission):
+    def has_permission(self, request, view):
+        user = request.user
+
+        if not user or not user.is_authenticated:
+            return False
+
+        if user.is_superuser:
+            return True
+
+        required_permissions = getattr(view, "action_permissions", {}).get(
+            getattr(view, "action", None)
+        )
+        required_permission = getattr(view, "required_permission", None)
+
+        if required_permissions is None and required_permission:
+            required_permissions = required_permission
+
+        if isinstance(required_permissions, str):
+            required_permissions = [required_permissions]
+
+        if required_permissions:
+            return all(user.has_perm(permission) for permission in required_permissions)
+
+        return user.is_staff
+
 
 class LoginView(APIView):
     permission_classes = [AllowAny]
@@ -95,8 +129,6 @@ class SessionCheckView(APIView):
     authentication_classes = [CookieJWTAuthentication]
 
     def get(self, request):
-        print('cookies', request.COOKIES)
-        print('user', request.user)
         user = request.user
         if user and user.is_authenticated:
             return Response({
@@ -151,10 +183,21 @@ class RefreshTokenView(APIView):
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all().prefetch_related(
         "user_units__unit",
-        "profile"
+        "profile",
+        "groups",
+        "groups__permissions__content_type",
+        "user_permissions__content_type",
     )
 
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsSuperuserOrActionPermission]
+    action_permissions = {
+        "list": "authentication.view_user",
+        "retrieve": "authentication.view_user",
+        "create": "authentication.add_user",
+        "update": "authentication.change_user",
+        "partial_update": "authentication.change_user",
+        "destroy": "authentication.delete_user",
+    }
 
     def get_serializer_class(self):
         if self.action == "create":
@@ -213,7 +256,43 @@ class UserViewSet(viewsets.ModelViewSet):
 
 
 class UserDashboardStatsView(APIView):
+    permission_classes = [IsSuperuserOrActionPermission]
+    required_permission = "authentication.view_user"
 
     def get(self, request):
         data = UserDashboardService.get_stats()
         return Response(data)
+
+
+class RoleViewSet(viewsets.ModelViewSet):
+    serializer_class = RoleSerializer
+    permission_classes = [IsSuperuserOrActionPermission]
+    action_permissions = {
+        "list": "auth.view_group",
+        "retrieve": "auth.view_group",
+        "create": "auth.add_group",
+        "update": "auth.change_group",
+        "partial_update": "auth.change_group",
+        "destroy": "auth.delete_group",
+    }
+
+    def get_queryset(self):
+        return Group.objects.prefetch_related(
+            "permissions__content_type"
+        ).order_by("name")
+
+
+class PermissionViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = PermissionSerializer
+    permission_classes = [IsSuperuserOrActionPermission]
+    action_permissions = {
+        "list": "auth.view_permission",
+        "retrieve": "auth.view_permission",
+    }
+
+    def get_queryset(self):
+        return Permission.objects.select_related("content_type").order_by(
+            "content_type__app_label",
+            "content_type__model",
+            "codename",
+        )

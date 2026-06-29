@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group, Permission
 from rest_framework import serializers
 from django.db import transaction
 from apps.core.models import Profile, UserUnit, Unit
@@ -7,10 +8,68 @@ from apps.core.serializers import ProfileSerializer, UserUnitSerializer
 User = get_user_model()
 
 
+class PermissionSerializer(serializers.ModelSerializer):
+    app_label = serializers.CharField(source="content_type.app_label", read_only=True)
+    model = serializers.CharField(source="content_type.model", read_only=True)
+    permission = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Permission
+        fields = [
+            "id",
+            "name",
+            "codename",
+            "app_label",
+            "model",
+            "permission",
+        ]
+
+    def get_permission(self, obj):
+        return f"{obj.content_type.app_label}.{obj.codename}"
+
+
+class RoleSerializer(serializers.ModelSerializer):
+    permissions = serializers.PrimaryKeyRelatedField(
+        queryset=Permission.objects.select_related("content_type").all(),
+        many=True,
+        required=False,
+    )
+    permission_details = PermissionSerializer(
+        source="permissions",
+        many=True,
+        read_only=True,
+    )
+    permission_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Group
+        fields = [
+            "id",
+            "name",
+            "permissions",
+            "permission_details",
+            "permission_count",
+        ]
+
+    def get_permission_count(self, obj):
+        return obj.permissions.count()
+
+
 class UserSerializer(serializers.ModelSerializer):
     profile = ProfileSerializer(read_only=True)
     user_units = UserUnitSerializer(many=True, read_only=True)
     primary_unit = serializers.SerializerMethodField()
+    roles = serializers.SerializerMethodField()
+    role_ids = serializers.SerializerMethodField()
+    direct_permissions = serializers.SerializerMethodField()
+    direct_permission_ids = serializers.SerializerMethodField()
+    direct_permission_details = PermissionSerializer(
+        source="user_permissions",
+        many=True,
+        read_only=True,
+    )
+    effective_permissions = serializers.SerializerMethodField()
+    permission_count = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -19,6 +78,13 @@ class UserSerializer(serializers.ModelSerializer):
             'email', 
             'is_active', 
             'is_superuser', 
+            'roles',
+            'role_ids',
+            'direct_permissions',
+            'direct_permission_ids',
+            'direct_permission_details',
+            'effective_permissions',
+            'permission_count',
             'profile', 
             'user_units', 
             'primary_unit', 
@@ -29,11 +95,38 @@ class UserSerializer(serializers.ModelSerializer):
     def get_primary_unit(self, obj):
         primary = obj.user_units.filter(is_primary=True, is_active=True).first()
         return primary.unit.short_code if primary else None
-    
-        # If to return the full unit details
-        # if primary and primary.unit:
-        #     return UnitSerializer(primary.unit).data
-        # return None
+
+    def get_roles(self, obj):
+        return list(obj.groups.order_by("name").values_list("name", flat=True))
+
+    def get_role_ids(self, obj):
+        return list(obj.groups.order_by("name").values_list("id", flat=True))
+
+    def get_direct_permissions(self, obj):
+        return [
+            f"{permission.content_type.app_label}.{permission.codename}"
+            for permission in obj.user_permissions.select_related("content_type").order_by(
+                "content_type__app_label",
+                "content_type__model",
+                "codename",
+            )
+        ]
+
+    def get_direct_permission_ids(self, obj):
+        return list(
+            obj.user_permissions.order_by(
+                "content_type__app_label",
+                "content_type__model",
+                "codename",
+            ).values_list("id", flat=True)
+        )
+
+    def get_effective_permissions(self, obj):
+        return sorted(obj.get_all_permissions())
+
+    def get_permission_count(self, obj):
+        return len(obj.get_all_permissions())
+
 
 class UserProfileCreateSerializer(serializers.Serializer):
     first_name = serializers.CharField(max_length=150)
@@ -82,6 +175,18 @@ def sync_user_units(user, user_units_data):
 
 class UserCreateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
+    role_ids = serializers.PrimaryKeyRelatedField(
+        queryset=Group.objects.all(),
+        many=True,
+        write_only=True,
+        required=False,
+    )
+    user_permission_ids = serializers.PrimaryKeyRelatedField(
+        queryset=Permission.objects.all(),
+        many=True,
+        write_only=True,
+        required=False,
+    )
     profile = UserProfileCreateSerializer(write_only=True)
     user_units = UserUnitCreateSerializer(
         many=True,
@@ -97,6 +202,8 @@ class UserCreateSerializer(serializers.ModelSerializer):
             "password",
             "is_active",
             "is_superuser",
+            "role_ids",
+            "user_permission_ids",
             "profile",
             "user_units",
         ]
@@ -105,6 +212,8 @@ class UserCreateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         profile_data = validated_data.pop("profile")
         user_units_data = validated_data.pop("user_units", [])
+        role_ids = validated_data.pop("role_ids", [])
+        user_permission_ids = validated_data.pop("user_permission_ids", [])
         password = validated_data.pop("password")
 
         user = User.objects.create_user(
@@ -130,6 +239,9 @@ class UserCreateSerializer(serializers.ModelSerializer):
                 is_active=user_unit.get("is_active", True),
             )
 
+        user.groups.set(role_ids)
+        user.user_permissions.set(user_permission_ids)
+
         return user
 
 
@@ -139,6 +251,18 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         min_length=8,
         required=False,
         allow_blank=True,
+    )
+    role_ids = serializers.PrimaryKeyRelatedField(
+        queryset=Group.objects.all(),
+        many=True,
+        write_only=True,
+        required=False,
+    )
+    user_permission_ids = serializers.PrimaryKeyRelatedField(
+        queryset=Permission.objects.all(),
+        many=True,
+        write_only=True,
+        required=False,
     )
     profile = UserProfileCreateSerializer(write_only=True, required=False)
     user_units = UserUnitCreateSerializer(
@@ -155,6 +279,8 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             "password",
             "is_active",
             "is_superuser",
+            "role_ids",
+            "user_permission_ids",
             "profile",
             "user_units",
         ]
@@ -163,6 +289,8 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         profile_data = validated_data.pop("profile", None)
         user_units_data = validated_data.pop("user_units", None)
+        role_ids = validated_data.pop("role_ids", None)
+        user_permission_ids = validated_data.pop("user_permission_ids", None)
         password = validated_data.pop("password", None)
 
         for attr, value in validated_data.items():
@@ -186,5 +314,11 @@ class UserUpdateSerializer(serializers.ModelSerializer):
 
         if user_units_data is not None:
             sync_user_units(instance, user_units_data)
+
+        if role_ids is not None:
+            instance.groups.set(role_ids)
+
+        if user_permission_ids is not None:
+            instance.user_permissions.set(user_permission_ids)
 
         return instance
