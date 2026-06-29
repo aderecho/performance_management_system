@@ -270,6 +270,17 @@
   overflow-wrap: anywhere;
 }
 
+.pme-initiative-item-menu {
+  min-width: 0 !important;
+  width: min(600px, calc(100vw - 32px)) !important;
+}
+
+.pme-initiative-item-menu .q-item__label {
+  line-height: 1.3;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .pme-accomplishment-dialog {
   max-width: 94vw;
   overflow: hidden;
@@ -433,6 +444,134 @@
   white-space: normal !important;
   word-break: break-word !important;
   overflow-wrap: anywhere !important;
+}
+
+// Element-qualified selector so the brand header beats Quasar's own `th` rules
+// (the `.bg-surface` utility loses the specificity battle and never applied).
+.hierarchy-table thead th {
+  background-color: $surface;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding-bottom: 12px;
+  padding-top: 12px;
+  text-transform: uppercase;
+}
+
+.hierarchy-card {
+  background: #fff;
+  border: 1px solid #e6e9ef;
+  overflow: hidden;
+}
+
+.hierarchy-empty {
+  min-height: 220px;
+}
+
+.hierarchy-row td {
+  transition: background-color 0.15s ease;
+}
+.hierarchy-row:focus-visible {
+  outline: 2px solid $secondary;
+  outline-offset: -2px;
+}
+.hierarchy-row--group > td {
+  background: #f8fafc;
+}
+.hierarchy-row--clickable {
+  cursor: pointer;
+}
+.hierarchy-row--clickable:hover td {
+  background: #f4f6f8;
+}
+
+.hierarchy-toggle {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  margin-right: 6px;
+  width: 24px;
+}
+.hierarchy-chevron {
+  color: #64748b;
+  transition: transform 0.18s ease;
+}
+.hierarchy-chevron--open {
+  transform: rotate(90deg);
+}
+.hierarchy-leaf-dot {
+  background: #cbd5e1;
+  border-radius: 9999px;
+  height: 5px;
+  width: 5px;
+}
+.hierarchy-leaf-dot--accomplished {
+  background: $positive;
+}
+.hierarchy-leaf-dot--pending {
+  background: $negative;
+}
+
+.hierarchy-code {
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.hierarchy-name {
+  line-height: 1.35;
+}
+
+.hierarchy-open-hint {
+  color: #cbd5e1;
+  margin-left: 8px;
+  opacity: 0;
+  transition:
+    opacity 0.15s ease,
+    color 0.15s ease;
+}
+.hierarchy-row--clickable:hover .hierarchy-open-hint,
+.hierarchy-row--clickable:focus-visible .hierarchy-open-hint {
+  color: $primary;
+  opacity: 1;
+}
+
+.hierarchy-target {
+  color: #334155;
+  font-weight: 500;
+}
+.hierarchy-unit {
+  color: #94a3b8;
+  font-size: 0.75rem;
+  margin-left: 2px;
+}
+.hierarchy-accomplishment {
+  color: #334155;
+}
+.hierarchy-pct {
+  font-weight: 600;
+}
+
+.hierarchy-progress {
+  background: #e8edf2;
+  border-radius: 9999px;
+  height: 4px;
+  overflow: hidden;
+  width: 60px;
+}
+.hierarchy-progress-bar {
+  border-radius: inherit;
+  height: 100%;
+}
+.hierarchy-progress-bar--positive {
+  background: $positive;
+}
+.hierarchy-progress-bar--warning {
+  background: $warning;
+}
+.hierarchy-progress-bar--negative {
+  background: $negative;
 }
 
 // MAIN LAYOUT
@@ -674,4 +813,32 @@
   border-radius: 10px;
   margin: 0 8px;
   min-height: 44px;
+}
+
+// APP DRAWER
+
+.drawer-logo {
+    display: block;
+    width: 100%;
+    max-width: 220px;
+    height: auto;
+    object-fit: contain;
+}
+
+.drawer-collapse-enter-active,
+.drawer-collapse-leave-active {
+    overflow: hidden;
+    transition: max-height 0.15s ease, opacity 0.15s ease;
+}
+
+.drawer-collapse-enter-from,
+.drawer-collapse-leave-to {
+    max-height: 0;
+    opacity: 0;
+}
+
+.drawer-collapse-enter-to,
+.drawer-collapse-leave-from {
+    max-height: 160px;
+    opacity: 1;
 }

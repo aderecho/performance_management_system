@@ -15,10 +15,17 @@
             emit-value
             map-options
             dense
+            options-dense
             outlined
+            :disable="!isEdit && !itemOptions.length"
+            popup-content-class="pme-initiative-item-menu"
             :error="!!itemError"
             :error-message="itemError"
           />
+
+          <div v-if="!isEdit && !itemOptions.length" class="text-caption text-negative">
+            No authorized performance measures available for your unit.
+          </div>
 
           <!-- Description -->
           <q-input
@@ -78,7 +85,13 @@
 
         <q-card-actions align="right" class="q-pr-md">
           <q-btn flat label="Cancel" color="grey-7" @click="close(false)" />
-          <q-btn type="submit" label="Submit" color="primary" :loading="isSubmitting || loading" />
+          <q-btn
+            type="submit"
+            label="Submit"
+            color="primary"
+            :disable="!canSubmit"
+            :loading="isSubmitting || loading"
+          />
         </q-card-actions>
       </q-form>
     </q-card>
@@ -148,6 +161,9 @@ watch(
   { immediate: true },
 )
 
+// Submit
+const isEdit = computed(() => !!props.initiative)
+
 const flattenItems = (items, result = []) => {
   for (const i of items) {
     if (i.target !== null) result.push(i)
@@ -156,15 +172,42 @@ const flattenItems = (items, result = []) => {
   return result
 }
 
-const itemOptions = computed(() =>
-  flattenItems(props.items).map((i) => ({
-    label: `${i.code} ${i.name}`,
-    value: i.id,
-  })),
+const authorizedItemOptions = computed(() =>
+  flattenItems(props.items)
+    .filter((i) => i.can_submit_initiative)
+    .map((i) => ({
+      label: `${i.code} ${i.name}`,
+      value: i.id,
+    })),
 )
 
-// Submit
-const isEdit = computed(() => !!props.initiative)
+const currentItemOption = computed(() => {
+  if (!props.initiative?.item) {
+    return null
+  }
+
+  return {
+    label: props.initiative.item_name || 'Selected performance measure',
+    value: props.initiative.item,
+  }
+})
+
+const itemOptions = computed(() => {
+  if (!isEdit.value) {
+    return authorizedItemOptions.value
+  }
+
+  if (
+    currentItemOption.value &&
+    !authorizedItemOptions.value.some((option) => option.value === currentItemOption.value.value)
+  ) {
+    return [currentItemOption.value, ...authorizedItemOptions.value]
+  }
+
+  return authorizedItemOptions.value
+})
+
+const canSubmit = computed(() => isEdit.value || itemOptions.value.length > 0)
 
 const onSubmit = handleSubmit((values) => {
   emit('submitted', values)

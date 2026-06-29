@@ -129,6 +129,21 @@ async function refreshSelectedInitiatives() {
   return []
 }
 
+function firstApiMessage(data) {
+  if (!data) return null
+  if (typeof data === 'string') return data
+  if (Array.isArray(data)) return data.map(firstApiMessage).find(Boolean) || null
+  if (typeof data === 'object') {
+    return Object.values(data).map(firstApiMessage).find(Boolean) || null
+  }
+
+  return null
+}
+
+function apiErrorMessage(err, fallback) {
+  return firstApiMessage(err?.response?.data) || fallback
+}
+
 async function handleFilter(filters) {
   pmeDocumentStore.setFilters(filters)
   await refreshDocument()
@@ -182,8 +197,13 @@ async function handleInitiativeSubmitted(payload) {
 
     await refreshDocument()
     await refreshSelectedInitiatives()
-  } catch {
-    notify.negative(`Failed to ${isEdit ? 'update' : 'submit'} initiative. Please try again.`)
+  } catch (err) {
+    notify.negative(
+      apiErrorMessage(
+        err,
+        `Failed to ${isEdit ? 'update' : 'submit'} initiative. Please try again.`,
+      ),
+    )
   }
 }
 

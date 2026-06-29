@@ -410,6 +410,7 @@ class DocumentItemSerializer(serializers.ModelSerializer):
     # submissions = serializers.SerializerMethodField()
     total_accomplishment = serializers.FloatField(read_only=True)
     percent_achieved = serializers.FloatField(read_only=True)
+    can_submit_initiative = serializers.SerializerMethodField()
 
     class Meta:
         model = Item
@@ -420,9 +421,13 @@ class DocumentItemSerializer(serializers.ModelSerializer):
             "target",
             "total_accomplishment",
             "percent_achieved",
+            "can_submit_initiative",
             # "submissions",
             "children",
         ]
+
+    def get_can_submit_initiative(self, obj):
+        return bool(getattr(obj, "can_submit_initiative", False))
 
     def get_children(self, obj):
         return DocumentItemSerializer(

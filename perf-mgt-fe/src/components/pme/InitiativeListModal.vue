@@ -133,7 +133,7 @@
             v-if="selectedHistory.length"
             flat
             bordered
-            class="wrap-table"
+            class="wrap-table history-table"
           >
             <thead>
               <tr>
@@ -355,5 +355,16 @@ const formatDateTime = (value) => {
 .history-dialog {
   max-width: 92vw;
   width: 760px;
+}
+
+.history-table {
+  max-height: 60vh;
+}
+
+.history-table thead tr th {
+  background-color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 </style>

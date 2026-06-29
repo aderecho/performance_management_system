@@ -67,9 +67,11 @@
                         <q-tooltip>Edit</q-tooltip>
                     </q-btn>
 
-                    <q-btn size="sm" flat round color="negative" @click="handleDelete(props.row)">
-                        <UserRoundX :size="18" :stroke-width="2" />
-                        <q-tooltip>Deactivate</q-tooltip>
+                    <q-btn size="sm" flat round :color="props.row.is_active ? 'negative' : 'positive'"
+                        @click="handleDelete(props.row)">
+                        <UserRoundCheck v-if="!props.row.is_active" :size="18" :stroke-width="2" />
+                        <UserRoundX v-else :size="18" :stroke-width="2" />
+                        <q-tooltip>{{ props.row.is_active ? 'Deactivate' : 'Activate' }}</q-tooltip>
                     </q-btn>
                 </div>
             </template>
@@ -80,8 +82,12 @@
         <FormDialog v-model="showFormDialog" title="User" :data="selectedUser" :loading="userStore.loading.save"
             @submit="handleSubmit" />
 
-        <DeleteConfirmDialog v-model="showDeleteDialog" :loading="userStore.loading.delete" @confirmDelete="confirmDelete">
-            Are you sure you want to deactivate
+        <DeleteConfirmDialog v-model="showDeleteDialog" :loading="userStore.loading.delete"
+            :title="selectedUser?.is_active ? 'Confirm Deactivation' : 'Confirm Activation'"
+            :confirm-label="selectedUser?.is_active ? 'Deactivate' : 'Activate'"
+            :confirm-color="selectedUser?.is_active ? 'negative' : 'positive'"
+            @confirmDelete="confirmToggleStatus">
+            Are you sure you want to {{ selectedUser?.is_active ? 'deactivate' : 'activate' }}
             <strong>{{ selectedUser?.email || 'this user' }}</strong>?
         </DeleteConfirmDialog>
     </div>
@@ -96,7 +102,7 @@ import UserFilters from 'src/components/admin/UserFilters.vue'
 import AppTable from 'src/components/admin/MarkupTable.vue'
 import DeleteConfirmDialog from 'src/components/DeleteConfirmDialog.vue'
 import { useUserStore } from 'src/stores/user'
-import { Eye, SquarePen, UserRoundX, Users, UserCheck, UserPlus } from 'lucide-vue-next'
+import { Eye, SquarePen, UserRoundX, UserRoundCheck, Users, UserCheck, UserPlus } from 'lucide-vue-next'
 import { notify } from 'src/utils/notify'
 
 const userStore = useUserStore()
@@ -215,12 +221,20 @@ async function handleFilter(nextFilters) {
     }
 }
 
-async function confirmDelete() {
+async function confirmToggleStatus() {
     if (!selectedUser.value?.id) return
 
+    const wasActive = selectedUser.value.is_active
+    const actionPast = wasActive ? 'deactivated' : 'activated'
+    const actionVerb = wasActive ? 'deactivate' : 'activate'
+
     try {
-        await userStore.deactivateUser(selectedUser.value.id)
-        notify.positive('User deactivated successfully.')
+        if (wasActive) {
+            await userStore.deactivateUser(selectedUser.value.id)
+        } else {
+            await userStore.activateUser(selectedUser.value.id)
+        }
+        notify.positive(`User ${actionPast} successfully.`)
 
         showDeleteDialog.value = false
         selectedUser.value = null
@@ -228,8 +242,8 @@ async function confirmDelete() {
         await loadUsers()
         await userStore.fetchUserStats()
     } catch (err) {
-        console.error('Deactivate user failed:', err)
-        notify.negative('Failed to deactivate user. Please try again.')
+        console.error(`Failed to ${actionVerb} user:`, err)
+        notify.negative(`Failed to ${actionVerb} user. Please try again.`)
     }
 }
 

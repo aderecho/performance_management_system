@@ -98,12 +98,12 @@ export const useUserStore = defineStore('userStore', {
             }
         },
 
-        async deactivateUser(id) {
+        async setUserActive(id, isActive) {
             this.loading.delete = true
             this.error.delete = null
 
             try {
-                const response = await api.patch(`/auth/users/${id}/`, { is_active: false })
+                const response = await api.patch(`/auth/users/${id}/`, { is_active: isActive })
                 const index = this.users.findIndex(user => user.id === id)
 
                 if (index !== -1) {
@@ -117,6 +117,14 @@ export const useUserStore = defineStore('userStore', {
             } finally {
                 this.loading.delete = false
             }
+        },
+
+        deactivateUser(id) {
+            return this.setUserActive(id, false)
+        },
+
+        activateUser(id) {
+            return this.setUserActive(id, true)
         },
 
         async fetchUserStats() {
