@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
+from uuid import UUID
 from apps.core.models import UserUnit
 from apps.pme.models import (
     Template,
@@ -369,9 +370,19 @@ class DashboardSummaryView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        document = request.query_params.get("document")
+
+        if document:
+            try:
+                UUID(document)
+            except ValueError:
+                raise ValidationError({"document": "Invalid document id."})
+
         return Response(get_dashboard_summary(
             search=request.query_params.get("search"),
+            group=request.query_params.get("group"),
             sra=request.query_params.get("sra"),
             status=request.query_params.get("status"),
+            document=document,
         ))
     
