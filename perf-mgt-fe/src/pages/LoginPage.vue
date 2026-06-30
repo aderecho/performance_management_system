@@ -12,10 +12,10 @@
             <q-input
               dense
               outlined
-              v-model="username"
-              label="Username"
-              :error="!!errors.username"
-              :error-message="errors.username"
+              v-model="email"
+              label="Email"
+              :error="!!errors.email"
+              :error-message="errors.email"
             />
             <q-input
               dense
@@ -83,18 +83,18 @@ const router = useRouter()
 const { handleSubmit, errors, resetForm, isSubmitting } = useForm({
   validationSchema: toTypedSchema(loginSchema),
   initialValues: {
-    username: '',
+    email: '',
     password: '',
   },
 })
 
-const { value: username } = useField('username')
+const { value: email } = useField('email')
 const { value: password } = useField('password')
 
 const onSubmit = handleSubmit(async (values) => {
   try {
-    await authStore.login(values.username, values.password)
-    notify.positive(`Welcome back, ${values.username}!`)
+    await authStore.login(values.email, values.password)
+    notify.positive(`Welcome back, ${values.email}!`)
     resetForm()
     router.push('/admin/dashboard')
   } catch {

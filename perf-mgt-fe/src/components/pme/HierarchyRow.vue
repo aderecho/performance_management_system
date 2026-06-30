@@ -110,8 +110,6 @@ const achievement = computed(() => {
   return { color: 'negative', barClass: 'hierarchy-progress-bar--negative' }
 })
 
-// Leaf dot doubles as a status cue on measure rows: green when accomplished,
-// red when not. Non-measure leaf rows keep the neutral default.
 const leafDotClass = computed(() => {
   if (!isClickable.value) return ''
   return isAccomplished.value ? 'hierarchy-leaf-dot--accomplished' : 'hierarchy-leaf-dot--pending'

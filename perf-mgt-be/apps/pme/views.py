@@ -7,7 +7,6 @@ from rest_framework.views import APIView
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
-from uuid import UUID
 from apps.core.models import UserUnit
 from apps.pme.models import (
     Template,
@@ -26,11 +25,15 @@ from apps.pme.serializers import (
     TemplateNodeTypeSerializer,
     ReportingFrequencySerializer,
     DocumentSerializer,
+    GeneratePeriodsRequestSerializer,
+    DocumentItemsQuerySerializer,
     ItemFilterSerializer,
+    ItemListQuerySerializer,
     ReportingPeriodSerializer,
     InitiativeSerializer,
     DocumentWithItemsSerializer,
     InitiativeAccomplishmentSerializer,
+    DashboardSummaryQuerySerializer,
 )
 from apps.pme.services import (
     generate_reporting_periods_for_document,
@@ -65,7 +68,10 @@ class DocumentViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"], url_path="generate-periods")
     def generate_periods(self, request, pk=None):
         document = self.get_object()
-        periods_ahead = int(request.data.get("periods_ahead", 12))
+        request_serializer = GeneratePeriodsRequestSerializer(data=request.data)
+        request_serializer.is_valid(raise_exception=True)
+        periods_ahead = request_serializer.validated_data["periods_ahead"]
+
         created = generate_reporting_periods_for_document(document, periods_ahead)
         return Response(
             ReportingPeriodSerializer(created, many=True).data,
@@ -76,9 +82,13 @@ class DocumentViewSet(viewsets.ModelViewSet):
     def items(self, request, pk=None):
         document = self.get_object()
 
-        period_id = request.query_params.get("period")
-        item_id = request.query_params.get("item")
-        show_all = request.query_params.get("show_all")
+        query_serializer = DocumentItemsQuerySerializer(data=request.query_params)
+        query_serializer.is_valid(raise_exception=True)
+        params = query_serializer.validated_data
+
+        period_id = params.get("period")
+        item_id = params.get("item")
+        show_all = params.get("show_all", False)
 
         reporting_period = None
         if period_id:
@@ -122,7 +132,12 @@ class ItemViewSet(viewsets.ModelViewSet):
         )
 
         document_id = self.request.query_params.get("document")
-        parent_id = self.request.query_params.get("parent")
+        query_serializer = ItemListQuerySerializer(data=self.request.query_params)
+        query_serializer.is_valid(raise_exception=True)
+        params = query_serializer.validated_data
+
+        document_id = params.get("document")
+        parent_id = params.get("parent")
 
         # Restrict to specific document
         if document_id:
@@ -370,27 +385,16 @@ class DashboardSummaryView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        template = request.query_params.get("template")
-        document = request.query_params.get("document")
-
-        if template:
-            try:
-                UUID(template)
-            except ValueError:
-                raise ValidationError({"template": "Invalid template id."})
-
-        if document:
-            try:
-                UUID(document)
-            except ValueError:
-                raise ValidationError({"document": "Invalid document id."})
+        query_serializer = DashboardSummaryQuerySerializer(data=request.query_params)
+        query_serializer.is_valid(raise_exception=True)
+        params = query_serializer.validated_data
 
         return Response(get_dashboard_summary(
-            search=request.query_params.get("search"),
-            group=request.query_params.get("group"),
-            sra=request.query_params.get("sra"),
-            status=request.query_params.get("status"),
-            template=template,
-            document=document,
+            search=params.get("search"),
+            group=params.get("group"),
+            sra=params.get("sra"),
+            status=params.get("status"),
+            template=params.get("template"),
+            document=params.get("document"),
         ))
     

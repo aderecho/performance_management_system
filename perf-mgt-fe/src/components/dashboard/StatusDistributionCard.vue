@@ -104,21 +104,72 @@ const sectionVars = computed(() => ({
 }))
 
 const normalizedItems = computed(() => {
-  return props.items.map((item) => {
-    const value = Number(item.value || 0)
+  const total = Number(props.total || 0)
+  const values = props.items.map((item) => Number(item.value || 0))
+  const valueTotal = values.reduce((sum, value) => sum + value, 0)
+  const isCompleteDistribution =
+    total > 0 &&
+    valueTotal === total &&
+    props.items.every((item) => item.percent === undefined)
+
+  if (isCompleteDistribution) {
+    const percentages = roundedDistributionPercentages(values, total)
+
+    return props.items.map((item, index) => ({
+      ...item,
+      percent: percentages[index],
+    }))
+  }
+
+  return props.items.map((item, index) => {
     const percent =
       item.percent !== undefined
         ? Number(item.percent || 0)
-        : props.total
-          ? Math.round((value / props.total) * 100)
+        : total
+          ? Math.round((values[index] / total) * 100)
           : 0
 
     return {
       ...item,
-      percent: Math.max(0, Math.min(percent, 100)),
+      percent: clampPercent(percent),
     }
   })
 })
+
+function roundedDistributionPercentages(values, total) {
+  const parts = values.map((value, index) => {
+    const exact = (value / total) * 100
+    const floor = Math.floor(exact)
+
+    return {
+      index,
+      value,
+      floor,
+      remainder: exact - floor,
+    }
+  })
+
+  let remaining = 100 - parts.reduce((sum, part) => sum + part.floor, 0)
+  const percentages = parts.map((part) => part.floor)
+
+  parts
+    .filter((part) => part.value > 0)
+    .sort((a, b) => b.remainder - a.remainder || a.index - b.index)
+    .forEach((part) => {
+      if (remaining <= 0) {
+        return
+      }
+
+      percentages[part.index] += 1
+      remaining -= 1
+    })
+
+  return percentages.map(clampPercent)
+}
+
+function clampPercent(percent) {
+  return Math.max(0, Math.min(Number(percent) || 0, 100))
+}
 
 const displayCenterValue = computed(() => props.centerValue ?? props.total)
 

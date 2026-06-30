@@ -9,13 +9,17 @@ from rest_framework import viewsets
 from django.contrib.auth import get_user_model
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import Group, Permission
+from django.db import connection
 from django.http import JsonResponse
 
 from .authentication import CookieJWTAuthentication
 
 from .serializers import (
+    LoginRequestSerializer,
     PermissionSerializer,
+    RefreshTokenCookieSerializer,
     RoleSerializer,
+    RoleStatusSerializer,
     UserSerializer,
     UserCreateSerializer,
     UserUpdateSerializer,
@@ -57,8 +61,11 @@ class LoginView(APIView):
     authentication_classes = []
 
     def post(self, request):
-        email = request.data.get("email")
-        password = request.data.get("password")
+        serializer = LoginRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        email = serializer.validated_data["email"]
+        password = serializer.validated_data["password"]
 
         user = authenticate(request, email=email, password=password)
 
@@ -102,7 +109,9 @@ class LogoutView(APIView):
         Clear JWT cookies
         """
 
-        refresh_token = request.COOKIES.get("refresh_token")
+        serializer = RefreshTokenCookieSerializer(data=request.COOKIES)
+        serializer.is_valid(raise_exception=True)
+        refresh_token = serializer.validated_data.get("refresh_token")
 
         if refresh_token:
             try:
@@ -155,7 +164,10 @@ class RefreshTokenView(APIView):
 
     def post(self, request):
         from rest_framework_simplejwt.tokens import RefreshToken
-        refresh_token = request.COOKIES.get('refresh_token')
+        serializer = RefreshTokenCookieSerializer(data=request.COOKIES)
+        serializer.is_valid(raise_exception=True)
+        refresh_token = serializer.validated_data.get("refresh_token")
+
         if not refresh_token:
             return Response({"error": "No refresh token"}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -208,25 +220,6 @@ class UserViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        params = self.request.query_params
-
-        primary_unit = params.get("primary_unit")
-        is_active = params.get("is_active")
-        is_superuser = params.get("is_superuser")
-
-        if primary_unit:
-            queryset = queryset.filter(
-                user_units__unit_id=primary_unit,
-                user_units__is_primary=True,
-                user_units__is_active=True,
-            )
-
-        if is_active in ["true", "false"]:
-            queryset = queryset.filter(is_active=is_active == "true")
-
-        if is_superuser in ["true", "false"]:
-            queryset = queryset.filter(is_superuser=is_superuser == "true")
-
         return queryset.distinct().order_by("-created_at")
 
     def create(self, request, *args, **kwargs):
@@ -279,7 +272,30 @@ class RoleViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Group.objects.prefetch_related(
             "permissions__content_type"
+        ).extra(
+            select={"is_deleted": "auth_group.is_deleted"}
         ).order_by("name")
+
+    def partial_update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        is_deleted_serializer = RoleStatusSerializer(
+            data=request.data,
+            partial=True,
+        )
+        is_deleted_serializer.is_valid(raise_exception=True)
+
+        if "is_deleted" in is_deleted_serializer.validated_data:
+            value = is_deleted_serializer.validated_data["is_deleted"]
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "UPDATE auth_group SET is_deleted = %s WHERE id = %s",
+                    [value, instance.id],
+                )
+
+            instance = self.get_queryset().get(pk=instance.pk)
+            return Response(self.get_serializer(instance).data)
+
+        return super().partial_update(request, *args, **kwargs)
 
 
 class PermissionViewSet(viewsets.ReadOnlyModelViewSet):
