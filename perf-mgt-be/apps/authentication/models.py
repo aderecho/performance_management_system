@@ -45,3 +45,49 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+
+
+class AuditLog(models.Model):
+    MODULE_AUTH = "auth"
+    MODULE_ADMIN = "admin"
+    MODULE_PME = "pme"
+    MODULE_CORE = "core"
+    MODULE_CHOICES = [
+        (MODULE_AUTH, "Auth"),
+        (MODULE_ADMIN, "Admin"),
+        (MODULE_PME, "PME"),
+        (MODULE_CORE, "Core"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="audit_logs",
+    )
+    user_email = models.EmailField(blank=True, default="")
+    module = models.CharField(max_length=30, choices=MODULE_CHOICES, default=MODULE_ADMIN)
+    action = models.CharField(max_length=80)
+    target_type = models.CharField(max_length=80, blank=True, default="")
+    target_id = models.CharField(max_length=80, blank=True, default="")
+    target_label = models.CharField(max_length=255, blank=True, default="")
+    summary = models.CharField(max_length=500)
+    metadata = models.JSONField(default=dict, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=500, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["created_at"]),
+            models.Index(fields=["action"]),
+            models.Index(fields=["target_type"]),
+            models.Index(fields=["user"]),
+            models.Index(fields=["module"]),
+        ]
+
+    def __str__(self):
+        return f"{self.user_email or 'System'} {self.action} {self.target_label}".strip()

@@ -40,6 +40,25 @@ from apps.pme.services import (
     prefetch_latest_submitted_accomplishment,
     get_dashboard_summary
 )
+from apps.authentication.models import AuditLog
+from apps.authentication.services import AuditLogService
+
+
+def changed_fields_from_serializer(serializer):
+    return sorted(serializer.validated_data.keys())
+
+
+def record_pme_audit(request, action, target, summary, metadata=None):
+    AuditLogService.record(
+        request=request,
+        module=AuditLog.MODULE_PME,
+        action=action,
+        target_type=target.__class__.__name__.lower(),
+        target_id=getattr(target, "id", ""),
+        target_label=str(target),
+        summary=summary,
+        metadata=metadata or {},
+    )
 
 
 class TemplateViewSet(viewsets.ModelViewSet):
@@ -64,6 +83,45 @@ class DocumentViewSet(viewsets.ModelViewSet):
     queryset = Document.objects.select_related("template", "reporting_frequency")
     serializer_class = DocumentSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def perform_create(self, serializer):
+        document = serializer.save()
+        record_pme_audit(
+            self.request,
+            "document.create",
+            document,
+            f"Created document {document.name}.",
+            metadata={"fields": changed_fields_from_serializer(serializer)},
+        )
+
+    def perform_update(self, serializer):
+        document = serializer.save()
+        record_pme_audit(
+            self.request,
+            "document.update",
+            document,
+            f"Updated document {document.name}.",
+            metadata={
+                "fields": changed_fields_from_serializer(serializer),
+                "status": document.get_status_display(),
+            },
+        )
+
+    def perform_destroy(self, instance):
+        metadata = {"status": instance.get_status_display()}
+        target_id = instance.id
+        target_label = instance.name
+        instance.delete()
+        AuditLogService.record(
+            request=self.request,
+            module=AuditLog.MODULE_PME,
+            action="document.delete",
+            target_type="document",
+            target_id=target_id,
+            target_label=target_label,
+            summary=f"Deleted document {target_label}.",
+            metadata=metadata,
+        )
 
     @action(detail=True, methods=["post"], url_path="generate-periods")
     def generate_periods(self, request, pk=None):
@@ -152,6 +210,48 @@ class ItemViewSet(viewsets.ModelViewSet):
 
         return qs.order_by("code")
 
+    def perform_create(self, serializer):
+        item = serializer.save()
+        record_pme_audit(
+            self.request,
+            "item.create",
+            item,
+            f"Created item {item.name}.",
+            metadata={"fields": changed_fields_from_serializer(serializer)},
+        )
+
+    def perform_update(self, serializer):
+        item = serializer.save()
+        record_pme_audit(
+            self.request,
+            "item.update",
+            item,
+            f"Updated item {item.name}.",
+            metadata={
+                "fields": changed_fields_from_serializer(serializer),
+                "status": item.get_status_display(),
+            },
+        )
+
+    def perform_destroy(self, instance):
+        target_id = instance.id
+        target_label = instance.name
+        metadata = {
+            "document": instance.document.name,
+            "status": instance.get_status_display(),
+        }
+        instance.delete()
+        AuditLogService.record(
+            request=self.request,
+            module=AuditLog.MODULE_PME,
+            action="item.delete",
+            target_type="item",
+            target_id=target_id,
+            target_label=target_label,
+            summary=f"Deleted item {target_label}.",
+            metadata=metadata,
+        )
+
     
 
 
@@ -174,7 +274,6 @@ class InitiativeViewSet(viewsets.ModelViewSet):
     queryset = Initiative.objects.select_related(
         "item",
         "created_by",
-        "created_at",
         "unit",
         "accomplishment"
     )
@@ -208,10 +307,52 @@ class InitiativeViewSet(viewsets.ModelViewSet):
                 "Your unit is not authorized to submit initiatives for this item."
             )
 
-        # Save initiative
-        serializer.save(
+        initiative = serializer.save(
             created_by=user,
             unit=unit,
+        )
+        record_pme_audit(
+            self.request,
+            "initiative.create",
+            initiative,
+            f"Created initiative {initiative.description}.",
+            metadata={
+                "item": item.name,
+                "unit": unit.short_code or unit.name,
+                "fields": changed_fields_from_serializer(serializer),
+            },
+        )
+
+    def perform_update(self, serializer):
+        initiative = serializer.save()
+        record_pme_audit(
+            self.request,
+            "initiative.update",
+            initiative,
+            f"Updated initiative {initiative.description}.",
+            metadata={
+                "item": initiative.item.name,
+                "fields": changed_fields_from_serializer(serializer),
+            },
+        )
+
+    def perform_destroy(self, instance):
+        target_id = instance.id
+        target_label = instance.description
+        metadata = {
+            "item": instance.item.name,
+            "unit": instance.unit.short_code if instance.unit else "",
+        }
+        instance.delete()
+        AuditLogService.record(
+            request=self.request,
+            module=AuditLog.MODULE_PME,
+            action="initiative.delete",
+            target_type="initiative",
+            target_id=target_id,
+            target_label=target_label,
+            summary=f"Deleted initiative {target_label}.",
+            metadata=metadata,
         )
 
     @action(detail=False, methods=["get"], url_path="by-item/(?P<item_pk>[^/.]+)")
@@ -301,6 +442,8 @@ class InitiativeViewSet(viewsets.ModelViewSet):
 
             with transaction.atomic():
                 file_upload = serializer.validated_data.pop("file_path", None)
+                is_update = accomplishment is not None
+                file_name = getattr(file_upload, "name", "") if file_upload else ""
 
                 if accomplishment:
                     accomplishment.reporting_period = serializer.validated_data["reporting_period"]
@@ -337,6 +480,37 @@ class InitiativeViewSet(viewsets.ModelViewSet):
                     accomplishment.file_path = None
                     accomplishment.save(update_fields=["file_path", "updated_at"])
 
+                action = "accomplishment.update" if is_update else "accomplishment.submit"
+                period = accomplishment.reporting_period
+                metadata = {
+                    "initiative": initiative.description,
+                    "item": initiative.item.name,
+                    "reporting_period": str(period) if period else "",
+                    "evidence_uploaded": bool(file_upload),
+                }
+                if file_name:
+                    metadata["file_name"] = file_name
+
+                record_pme_audit(
+                    request,
+                    action,
+                    accomplishment,
+                    f"{'Updated' if is_update else 'Submitted'} accomplishment for {initiative.description}.",
+                    metadata=metadata,
+                )
+
+                if file_upload:
+                    AuditLogService.record(
+                        request=request,
+                        module=AuditLog.MODULE_PME,
+                        action="evidence.upload",
+                        target_type="initiativeaccomplishment",
+                        target_id=accomplishment.id,
+                        target_label=initiative.description,
+                        summary=f"Uploaded evidence for {initiative.description}.",
+                        metadata={"file_name": file_name},
+                    )
+
             response_serializer = InitiativeAccomplishmentSerializer(
                 accomplishment,
                 context={"request": request},
@@ -365,6 +539,27 @@ class InitiativeViewSet(viewsets.ModelViewSet):
                 accomplishment.files.filter(
                     status=InitiativeAccomplishmentFile.STATUS_ACTIVE
                 ).update(status=InitiativeAccomplishmentFile.STATUS_REVERTED)
+
+                record_pme_audit(
+                    request,
+                    "accomplishment.revert",
+                    accomplishment,
+                    f"Reverted accomplishment for {initiative.description}.",
+                    metadata={
+                        "initiative": initiative.description,
+                        "item": initiative.item.name,
+                        "status": accomplishment.get_status_display(),
+                    },
+                )
+                AuditLogService.record(
+                    request=request,
+                    module=AuditLog.MODULE_PME,
+                    action="evidence.revert",
+                    target_type="initiativeaccomplishment",
+                    target_id=accomplishment.id,
+                    target_label=initiative.description,
+                    summary=f"Reverted active evidence for {initiative.description}.",
+                )
 
             serializer = InitiativeAccomplishmentSerializer(
                 accomplishment,

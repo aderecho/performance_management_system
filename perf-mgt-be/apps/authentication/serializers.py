@@ -4,6 +4,7 @@ from rest_framework import serializers
 from django.db import transaction
 from apps.core.models import Profile, UserUnit, Unit
 from apps.core.serializers import ProfileSerializer, UserUnitSerializer
+from .models import AuditLog
 
 User = get_user_model()
 
@@ -15,6 +16,54 @@ class LoginRequestSerializer(serializers.Serializer):
 
 class RefreshTokenCookieSerializer(serializers.Serializer):
     refresh_token = serializers.CharField(required=False, allow_blank=False)
+
+
+class AuditLogQuerySerializer(serializers.Serializer):
+    module = serializers.ChoiceField(
+        choices=[choice[0] for choice in AuditLog.MODULE_CHOICES],
+        required=False,
+    )
+    action = serializers.CharField(required=False, allow_blank=True)
+    target_type = serializers.CharField(required=False, allow_blank=True)
+    user = serializers.CharField(required=False, allow_blank=True)
+    date_from = serializers.DateField(required=False)
+    date_to = serializers.DateField(required=False)
+    search = serializers.CharField(required=False, allow_blank=True)
+    limit = serializers.IntegerField(required=False, min_value=1, max_value=1000)
+
+
+class AuditLogSerializer(serializers.ModelSerializer):
+    user_full_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AuditLog
+        fields = [
+            "id",
+            "user",
+            "user_email",
+            "user_full_name",
+            "module",
+            "action",
+            "target_type",
+            "target_id",
+            "target_label",
+            "summary",
+            "metadata",
+            "ip_address",
+            "user_agent",
+            "created_at",
+        ]
+        read_only_fields = fields
+
+    def get_user_full_name(self, obj):
+        profile = getattr(obj.user, "profile", None) if obj.user else None
+        if profile:
+            name = " ".join(
+                part for part in (profile.first_name, profile.last_name) if part
+            ).strip()
+            if name:
+                return name
+        return obj.user_email or "System"
 
 
 class PermissionSerializer(serializers.ModelSerializer):

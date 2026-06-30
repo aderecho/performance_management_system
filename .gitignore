@@ -43,7 +43,7 @@ ENV/
 # Static & media
 /staticfiles/
 /media/
-perf-mgt-be/media/
+.perf-mgt-be/media/
 
 # Django BUILD / TEST / CACHE
 .coverage

@@ -1141,3 +1141,41 @@
   justify-content: center;
   padding: 16px 0 8px;
 }
+
+// AUDIT LOG
+
+.audit-filters {
+  align-items: stretch;
+}
+
+.audit-summary {
+  max-width: 360px;
+  white-space: normal;
+}
+
+.audit-dialog {
+  width: 760px;
+  max-width: 94vw;
+}
+
+.audit-dialog__icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  color: var(--q-primary);
+  background: rgba(25, 118, 210, 0.1);
+}
+
+.audit-detail {
+  min-height: 64px;
+  padding: 10px 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.break-word {
+  overflow-wrap: anywhere;
+}
