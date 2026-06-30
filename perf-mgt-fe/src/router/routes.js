@@ -2,48 +2,37 @@ const routes = [
   {
     path: '/',
     redirect: '/admin/dashboard',
-  },
-  {
-    path: '/admin',
-    redirect: '/admin/dashboard',
     component: () => import('layouts/MainLayout.vue'),
+    meta: { requiresAuth: true },
     children: [
-      // {
-      //   path: '',
-      //   component: () => import('pages/IndexPage.vue'),
-      //   meta: { requiresAuth: true }
-      // },
       {
         path: '/documents/:documentId',
         name: 'documents.show',
         component: () => import('pages/PmePage.vue'),
-        props: true,
-        meta: { requiresAuth: true }
+        props: true
       },
       {
         path: '/admin/dashboard',
         name: 'dashboard',
-        component: () => import('pages/DashboardPage.vue'),
-        meta: { requiresAuth: true }
+        component: () => import('pages/DashboardPage.vue')
       },
       {
         path: '/admin/users',
         name: 'users',
         component: () => import('pages/UserPage.vue'),
-        meta: { requiresAuth: true, requiredPermission: 'authentication.view_user' }
+        meta: { requiredPermission: 'authentication.view_user' }
       },
       {
         path: '/admin/roles',
         name: 'roles',
         component: () => import('pages/RolePage.vue'),
-        meta: { requiresAuth: true, requiredPermission: 'auth.view_group' }
+        meta: { requiredPermission: 'auth.view_group' }
       },
       {
         path: '/admin/permissions',
         name: 'permissions',
         component: () => import('pages/PermissionPage.vue'),
         meta: {
-          requiresAuth: true,
           requiredPermissions: [
             'auth.view_permission',
             'authentication.view_user',
@@ -51,16 +40,16 @@ const routes = [
           ]
         }
       },
-       {
+      {
         path: '/admin/audit-logs',
         name: 'audit-logs',
         component: () => import('pages/AuditLogPage.vue'),
-        meta: { requiresAuth: true, requiresSuperAdmin: true }
-      },
+        meta: { requiresSuperAdmin: true }
+      }
     ],
   },
-  { 
-    path: '/login', 
+  {
+    path: '/login',
     component: () => import('pages/LoginPage.vue'),
   },
 

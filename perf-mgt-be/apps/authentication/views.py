@@ -9,18 +9,25 @@ from rest_framework import viewsets
 from django.contrib.auth import get_user_model
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import Group, Permission
+from django.db import connection
 from django.http import JsonResponse
 
 from .authentication import CookieJWTAuthentication
 
 from .serializers import (
+    AuditLogQuerySerializer,
+    AuditLogSerializer,
+    LoginRequestSerializer,
     PermissionSerializer,
+    RefreshTokenCookieSerializer,
     RoleSerializer,
+    RoleStatusSerializer,
     UserSerializer,
     UserCreateSerializer,
     UserUpdateSerializer,
 )
-from .services import UserDashboardService
+from .models import AuditLog
+from .services import AuditLogService, UserDashboardService
 
 User = get_user_model()
 
@@ -52,13 +59,31 @@ class IsSuperuserOrActionPermission(BasePermission):
         return user.is_staff
 
 
+class IsSuperuser(BasePermission):
+    def has_permission(self, request, view):
+        user = request.user
+        return bool(user and user.is_authenticated and user.is_superuser)
+
+
+def changed_payload_fields(payload, excluded=None):
+    excluded = set(excluded or [])
+    return sorted(
+        key
+        for key in payload.keys()
+        if key not in excluded and "password" not in key.lower()
+    )
+
+
 class LoginView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
 
     def post(self, request):
-        email = request.data.get("email")
-        password = request.data.get("password")
+        serializer = LoginRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        email = serializer.validated_data["email"]
+        password = serializer.validated_data["password"]
 
         user = authenticate(request, email=email, password=password)
 
@@ -89,6 +114,17 @@ class LoginView(APIView):
             max_age=60 * 60 * 24 * 7,  # 7 days
         )
 
+        AuditLogService.record(
+            request=request,
+            user=user,
+            module=AuditLog.MODULE_AUTH,
+            action="login.success",
+            target_type="user",
+            target_id=user.id,
+            target_label=user.email,
+            summary=f"{user.email} signed in.",
+        )
+
         return response
     
 
@@ -102,7 +138,17 @@ class LogoutView(APIView):
         Clear JWT cookies
         """
 
-        refresh_token = request.COOKIES.get("refresh_token")
+        auth_user = None
+        try:
+            auth_result = CookieJWTAuthentication().authenticate(request)
+            if auth_result:
+                auth_user = auth_result[0]
+        except Exception:
+            auth_user = None
+
+        serializer = RefreshTokenCookieSerializer(data=request.COOKIES)
+        serializer.is_valid(raise_exception=True)
+        refresh_token = serializer.validated_data.get("refresh_token")
 
         if refresh_token:
             try:
@@ -120,6 +166,18 @@ class LogoutView(APIView):
         # Clear cookies
         response.delete_cookie("access_token")
         response.delete_cookie("refresh_token")
+
+        if auth_user:
+            AuditLogService.record(
+                request=request,
+                user=auth_user,
+                module=AuditLog.MODULE_AUTH,
+                action="logout.success",
+                target_type="user",
+                target_id=auth_user.id,
+                target_label=auth_user.email,
+                summary=f"{auth_user.email} signed out.",
+            )
 
         return response
 
@@ -155,7 +213,10 @@ class RefreshTokenView(APIView):
 
     def post(self, request):
         from rest_framework_simplejwt.tokens import RefreshToken
-        refresh_token = request.COOKIES.get('refresh_token')
+        serializer = RefreshTokenCookieSerializer(data=request.COOKIES)
+        serializer.is_valid(raise_exception=True)
+        refresh_token = serializer.validated_data.get("refresh_token")
+
         if not refresh_token:
             return Response({"error": "No refresh token"}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -208,25 +269,6 @@ class UserViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        params = self.request.query_params
-
-        primary_unit = params.get("primary_unit")
-        is_active = params.get("is_active")
-        is_superuser = params.get("is_superuser")
-
-        if primary_unit:
-            queryset = queryset.filter(
-                user_units__unit_id=primary_unit,
-                user_units__is_primary=True,
-                user_units__is_active=True,
-            )
-
-        if is_active in ["true", "false"]:
-            queryset = queryset.filter(is_active=is_active == "true")
-
-        if is_superuser in ["true", "false"]:
-            queryset = queryset.filter(is_superuser=is_superuser == "true")
-
         return queryset.distinct().order_by("-created_at")
 
     def create(self, request, *args, **kwargs):
@@ -234,6 +276,21 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
 
         user = serializer.save()
+
+        AuditLogService.record(
+            request=request,
+            module=AuditLog.MODULE_ADMIN,
+            action="user.create",
+            target_type="user",
+            target_id=user.id,
+            target_label=user.email,
+            summary=f"Created user {user.email}.",
+            metadata={
+                "fields": changed_payload_fields(request.data, excluded={"password"}),
+                "role_count": user.groups.count(),
+                "direct_permission_count": user.user_permissions.count(),
+            },
+        )
 
         return Response(
             UserSerializer(user).data,
@@ -251,6 +308,27 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
 
+        fields = changed_payload_fields(request.data, excluded={"password"})
+        status_action = None
+        if "is_active" in request.data:
+            status_action = "user.activate" if user.is_active else "user.deactivate"
+
+        AuditLogService.record(
+            request=request,
+            module=AuditLog.MODULE_ADMIN,
+            action=status_action or "user.update",
+            target_type="user",
+            target_id=user.id,
+            target_label=user.email,
+            summary=f"Updated user {user.email}.",
+            metadata={
+                "fields": fields,
+                "role_count": user.groups.count(),
+                "direct_permission_count": user.user_permissions.count(),
+                "is_active": user.is_active,
+            },
+        )
+
         return Response(UserSerializer(user).data, status=status.HTTP_200_OK)
 
 
@@ -262,6 +340,16 @@ class UserDashboardStatsView(APIView):
     def get(self, request):
         data = UserDashboardService.get_stats()
         return Response(data)
+
+
+class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = AuditLogSerializer
+    permission_classes = [IsSuperuser]
+
+    def get_queryset(self):
+        query_serializer = AuditLogQuerySerializer(data=self.request.query_params)
+        query_serializer.is_valid(raise_exception=True)
+        return AuditLogService.filtered_queryset(query_serializer.validated_data)
 
 
 class RoleViewSet(viewsets.ModelViewSet):
@@ -279,7 +367,93 @@ class RoleViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Group.objects.prefetch_related(
             "permissions__content_type"
+        ).extra(
+            select={"is_deleted": "auth_group.is_deleted"}
         ).order_by("name")
+
+    def create(self, request, *args, **kwargs):
+        response = super().create(request, *args, **kwargs)
+        role_name = response.data.get("name", "")
+        AuditLogService.record(
+            request=request,
+            module=AuditLog.MODULE_ADMIN,
+            action="role.create",
+            target_type="role",
+            target_id=response.data.get("id", ""),
+            target_label=role_name,
+            summary=f"Created role {role_name}.",
+            metadata={
+                "fields": changed_payload_fields(request.data),
+                "permission_count": response.data.get("permission_count", 0),
+            },
+        )
+        return response
+
+    def update(self, request, *args, **kwargs):
+        response = super().update(request, *args, **kwargs)
+        role_name = response.data.get("name", "")
+        AuditLogService.record(
+            request=request,
+            module=AuditLog.MODULE_ADMIN,
+            action="role.update",
+            target_type="role",
+            target_id=response.data.get("id", ""),
+            target_label=role_name,
+            summary=f"Updated role {role_name}.",
+            metadata={
+                "fields": changed_payload_fields(request.data),
+                "permission_count": response.data.get("permission_count", 0),
+            },
+        )
+        return response
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        target_id = instance.id
+        role_name = instance.name
+        response = super().destroy(request, *args, **kwargs)
+        AuditLogService.record(
+            request=request,
+            module=AuditLog.MODULE_ADMIN,
+            action="role.delete",
+            target_type="role",
+            target_id=target_id,
+            target_label=role_name,
+            summary=f"Deleted role {role_name}.",
+        )
+        return response
+
+    def partial_update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        is_deleted_serializer = RoleStatusSerializer(
+            data=request.data,
+            partial=True,
+        )
+        is_deleted_serializer.is_valid(raise_exception=True)
+
+        if "is_deleted" in is_deleted_serializer.validated_data:
+            value = is_deleted_serializer.validated_data["is_deleted"]
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "UPDATE auth_group SET is_deleted = %s WHERE id = %s",
+                    [value, instance.id],
+                )
+
+            instance = self.get_queryset().get(pk=instance.pk)
+            action = "role.deactivate" if value else "role.activate"
+            AuditLogService.record(
+                request=request,
+                module=AuditLog.MODULE_ADMIN,
+                action=action,
+                target_type="role",
+                target_id=instance.id,
+                target_label=instance.name,
+                summary=f"{'Inactivated' if value else 'Activated'} role {instance.name}.",
+                metadata={"is_deleted": value},
+            )
+            return Response(self.get_serializer(instance).data)
+
+        return super().partial_update(request, *args, **kwargs)
 
 
 class PermissionViewSet(viewsets.ReadOnlyModelViewSet):

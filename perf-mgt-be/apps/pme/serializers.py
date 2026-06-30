@@ -131,6 +131,31 @@ class ReportingFrequencySerializer(serializers.ModelSerializer):
         model = ReportingFrequency
         fields = "__all__"
 
+
+class GeneratePeriodsRequestSerializer(serializers.Serializer):
+    periods_ahead = serializers.IntegerField(default=12, min_value=1)
+
+
+class DocumentItemsQuerySerializer(serializers.Serializer):
+    period = serializers.UUIDField(required=False)
+    item = serializers.UUIDField(required=False)
+    show_all = serializers.BooleanField(required=False, default=False)
+
+
+class ItemListQuerySerializer(serializers.Serializer):
+    document = serializers.UUIDField(required=False)
+    parent = serializers.UUIDField(required=False)
+
+
+class DashboardSummaryQuerySerializer(serializers.Serializer):
+    template = serializers.UUIDField(required=False)
+    document = serializers.UUIDField(required=False)
+    search = serializers.CharField(required=False, allow_blank=True)
+    group = serializers.CharField(required=False, allow_blank=True)
+    sra = serializers.CharField(required=False, allow_blank=True)
+    status = serializers.CharField(required=False, allow_blank=True)
+
+
 # INITIATIVES
 class UnitInlineSerializer(serializers.ModelSerializer):
     class Meta:
@@ -453,7 +478,7 @@ class DocumentWithItemsSerializer(serializers.Serializer):
             document,
             reporting_period=reporting_period,
             item_id=item_id,
-            # show_all=show_all,
+            show_all=show_all,
             request=request,
         )
 
