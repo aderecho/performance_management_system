@@ -33,6 +33,32 @@ class UserDashboardService:
             updated_at__lt=start_current_month
         ).count()
 
+        # Total active staff users
+        active_staff_current = User.objects.filter(
+            is_active=True,
+            is_superuser=False
+        ).count()
+
+        # Total active staff users before current month
+        active_staff_last = User.objects.filter(
+            is_active=True,
+            is_superuser=False,
+            updated_at__lt=start_current_month
+        ).count()
+
+        # Total active admin users
+        active_admin_current = User.objects.filter(
+            is_active=True,
+            is_superuser=True
+        ).count()
+
+        # Total active admin users before current month
+        active_admin_last = User.objects.filter(
+            is_active=True,
+            is_superuser=True,
+            updated_at__lt=start_current_month
+        ).count()
+
         # Total new users
         new_current = User.objects.filter(
             created_at__gte=start_current_month
@@ -47,6 +73,8 @@ class UserDashboardService:
         return {
             "total_users": UserDashboardService.build_metric(total_current, total_last),
             "active_users": UserDashboardService.build_metric(active_current, active_last),
+            "active_staff": UserDashboardService.build_metric(active_staff_current, active_staff_last),
+            "active_admin": UserDashboardService.build_metric(active_admin_current, active_admin_last),
             "new_users": UserDashboardService.build_metric(new_current, new_last),
         }
 

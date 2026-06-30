@@ -1,4 +1,5 @@
 // app global css in SCSS form
+@use 'sass:color';
 
 .icon-soft {
   align-items: center;
@@ -757,6 +758,17 @@
   color: $azure;
 }
 
+.permission-type-filter {
+  width: 160px;
+  max-width: 100%;
+}
+
+@media (max-width: 599px) {
+  .permission-type-filter {
+    width: 100%;
+  }
+}
+
 // USER AVATAR MENU
 
 .account-trigger {
@@ -807,6 +819,7 @@
 .account-menu__role-chip {
   font-size: 0.7rem;
   font-weight: 600;
+  padding: 12px 5px;
 }
 
 .account-menu__item {
@@ -818,27 +831,313 @@
 // APP DRAWER
 
 .drawer-logo {
-    display: block;
-    width: 100%;
-    max-width: 220px;
-    height: auto;
-    object-fit: contain;
+  display: block;
+  width: 100%;
+  max-width: 220px;
+  height: auto;
+  object-fit: contain;
 }
 
 .drawer-collapse-enter-active,
 .drawer-collapse-leave-active {
-    overflow: hidden;
-    transition: max-height 0.15s ease, opacity 0.15s ease;
+  overflow: hidden;
+  transition:
+    max-height 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .drawer-collapse-enter-from,
 .drawer-collapse-leave-to {
-    max-height: 0;
-    opacity: 0;
+  max-height: 0;
+  opacity: 0;
 }
 
 .drawer-collapse-enter-to,
 .drawer-collapse-leave-from {
-    max-height: 160px;
-    opacity: 1;
+  max-height: 160px;
+  opacity: 1;
+}
+
+// USER FORM DIALOG (Create / Edit User)
+
+// Sizes to its content (no inner scroll); the whole dialog scrolls only if it
+// would exceed the viewport.
+.user-form-dialog {
+  border-radius: 16px;
+  overflow: hidden;
+  width: 820px;
+  max-width: 94vw;
+}
+
+// Remove Quasar's dialog height cap so the form is never scrollable —
+// the modal grows to fit its full content.
+.q-dialog__inner > .user-form-dialog {
+  max-height: none;
+}
+
+// Shared white header — mirrors the Role / Permission management dialogs.
+.user-dialog__header {
+  flex: none;
+}
+
+.user-dialog__icon {
+  align-items: center;
+  background: rgba($primary, 0.1);
+  border-radius: 10px;
+  color: $primary;
+  display: flex;
+  flex: none;
+  height: 40px;
+  justify-content: center;
+  width: 40px;
+}
+
+.user-form-scroll {
+  padding: 14px 20px;
+}
+
+.user-form-actions {
+  padding: 12px 20px;
+}
+
+.user-section-head {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.user-section-icon {
+  align-items: center;
+  background: rgba($primary, 0.1);
+  border-radius: 9px;
+  color: $primary;
+  display: flex;
+  flex: none;
+  height: 32px;
+  justify-content: center;
+  width: 32px;
+}
+
+.user-section-title {
+  color: #1f2937;
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.user-section-sub {
+  color: #94a3b8;
+  font-size: 0.74rem;
+}
+
+.access-card {
+  align-items: center;
+  border: 1px solid #e6e9ef;
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  gap: 10px;
+  min-height: 50px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.access-card:hover {
+  border-color: #d8dee8;
+}
+
+.access-card--on {
+  background: rgba($secondary, 0.06);
+  border-color: rgba($secondary, 0.45);
+}
+
+.access-card--on-super {
+  background: rgba($accent, 0.12);
+  border-color: rgba($accent, 0.55);
+}
+
+.access-card__icon {
+  align-items: center;
+  border-radius: 9px;
+  display: flex;
+  flex: none;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.access-card__icon--active {
+  background: rgba($secondary, 0.12);
+  color: $secondary;
+}
+
+.access-card__icon--super {
+  background: rgba($accent, 0.2);
+  color: color.adjust($accent, $lightness: -24%)
+}
+
+.access-card__title {
+  color: #1f2937;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+// GENERIC VIEW DIALOG SHELL (reused by any page with a View action)
+
+.view-dialog {
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  max-height: 88vh;
+  max-width: 94vw;
+  overflow: hidden;
+}
+
+.view-dialog__header {
+  flex: none;
+}
+
+.view-dialog__icon {
+  align-items: center;
+  background: rgba($primary, 0.1);
+  border-radius: 10px;
+  color: $primary;
+  display: flex;
+  flex: none;
+  height: 40px;
+  justify-content: center;
+  width: 40px;
+}
+
+.view-dialog__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px 20px 22px;
+}
+
+// USER VIEW DIALOG (User Details)
+
+.user-view-dialog {
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  max-height: 88vh;
+  overflow: hidden;
+  width: 560px;
+  max-width: 94vw;
+}
+
+.user-status-chip {
+  align-items: center;
+  border-radius: 6px;
+  display: inline-flex;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 3px 9px;
+}
+
+.user-status-chip--on {
+  background: rgba($secondary, 0.12);
+  color: $secondary;
+}
+
+.user-status-chip--off {
+  background: rgba($negative, 0.1);
+  color: $negative;
+}
+
+.user-status-chip--super {
+  background: rgba($accent, 0.22);
+  color: color.adjust($accent, $lightness: 24%);
+}
+
+.user-status-chip--muted {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.user-view-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px 20px 22px;
+}
+
+.info-tile {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #eef1f6;
+  border-radius: 11px;
+  display: flex;
+  gap: 10px;
+  height: 100%;
+  padding: 10px 12px;
+}
+
+.info-tile__icon {
+  align-items: center;
+  background: rgba($primary, 0.08);
+  border-radius: 8px;
+  color: $primary;
+  display: flex;
+  flex: none;
+  height: 30px;
+  justify-content: center;
+  width: 30px;
+}
+
+.info-tile__label {
+  color: #94a3b8;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.info-tile__value {
+  color: #1f2937;
+  font-size: 0.86rem;
+  font-weight: 500;
+}
+
+.roles-panel {
+  border: 1px solid #eef1f6;
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.roles-panel__head {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.roles-panel__title {
+  color: #1f2937;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.roles-panel__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.roles-panel__empty {
+  align-items: center;
+  color: #94a3b8;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 16px 0 8px;
 }

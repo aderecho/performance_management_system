@@ -53,7 +53,7 @@
         <q-list padding>
           <q-item class="account-menu__item" @click="themeStore.setDarkMode(!themeStore.darkMode)">
             <q-item-section avatar>
-              <q-icon :name="themeStore.darkMode ? 'dark_mode' : 'light_mode'" color="primary" />
+              <q-icon :name="themeStore.darkMode ? 'dark_mode' : 'light_mode'" />
             </q-item-section>
             <q-item-section>Dark Mode</q-item-section>
             <q-item-section side>
