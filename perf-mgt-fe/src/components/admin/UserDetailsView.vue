@@ -103,14 +103,12 @@ import {
   CircleCheck,
   CircleSlash,
 } from 'lucide-vue-next'
-import { useRoleStore } from 'src/stores/role'
 
 const props = defineProps({
   data: Object,
 })
 
-const roleStore = useRoleStore()
-const roles = computed(() => roleStore.roleNamesByIds(props.data?.role_ids))
+const roles = computed(() => props.data?.role_names || [])
 
 function formatDate(val) {
   if (!val) return '—'

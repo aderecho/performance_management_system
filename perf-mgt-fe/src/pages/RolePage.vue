@@ -51,12 +51,20 @@
             <q-tooltip>View</q-tooltip>
           </q-btn>
 
-          <q-btn size="sm" flat round color="secondary" @click="handleEdit(props.row)">
+          <q-btn
+            v-if="canChangeRole"
+            size="sm"
+            flat
+            round
+            color="secondary"
+            @click="handleEdit(props.row)"
+          >
             <SquarePen :size="18" :stroke-width="2" />
             <q-tooltip>Edit</q-tooltip>
           </q-btn>
 
           <q-btn
+            v-if="canDeleteRole"
             size="sm"
             flat
             round
@@ -325,6 +333,7 @@ import PageComboHeader from 'src/components/PageComboHeader.vue'
 import AppTable from 'src/components/admin/MarkupTable.vue'
 import ViewDialog from 'src/components/admin/ViewDialog.vue'
 import DeleteConfirmDialog from 'src/components/DeleteConfirmDialog.vue'
+import { useAuthStore } from 'src/stores/auth'
 import { usePermissionStore } from 'src/stores/permission'
 import { useRoleStore } from 'src/stores/role'
 import { notify } from 'src/utils/notify'
@@ -339,6 +348,7 @@ import {
   SquarePen,
 } from 'lucide-vue-next'
 
+const authStore = useAuthStore()
 const roleStore = useRoleStore()
 const permissionStore = usePermissionStore()
 
@@ -355,6 +365,16 @@ const form = reactive({
   name: '',
   permissions: [],
 })
+
+const canCreateRole = computed(() =>
+  authStore.canAccess({ requiredPermission: 'auth.add_group' }),
+)
+const canChangeRole = computed(() =>
+  authStore.canAccess({ requiredPermission: 'auth.change_group' }),
+)
+const canDeleteRole = computed(() =>
+  authStore.canAccess({ requiredPermission: 'auth.delete_group' }),
+)
 
 const groupModeOptions = [
   { label: 'By Module', value: 'module', icon: 'widgets' },
@@ -380,6 +400,7 @@ const buttons = [
     color: 'primary',
     onClick: handleCreate,
     tooltip: 'Create new Role',
+    permission: () => canCreateRole.value,
   },
 ]
 

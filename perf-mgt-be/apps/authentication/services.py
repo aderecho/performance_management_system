@@ -1,6 +1,7 @@
 from django.utils.timezone import now
 from datetime import timedelta
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
 from django.db.models import Q
 
 from .models import AuditLog
@@ -19,6 +20,46 @@ SENSITIVE_METADATA_KEYS = {
     "cookies",
     "authorization",
 }
+
+
+def permission_to_code(permission):
+    return f"{permission.content_type.app_label}.{permission.codename}"
+
+
+def permission_queryset_to_codes(queryset):
+    return {
+        permission_to_code(permission)
+        for permission in queryset.select_related("content_type")
+    }
+
+
+def get_effective_permissions(user):
+    if not user or not getattr(user, "is_authenticated", False):
+        return []
+
+    if user.is_superuser:
+        return sorted(permission_queryset_to_codes(Permission.objects.all()))
+
+    direct_permissions = permission_queryset_to_codes(user.user_permissions.all())
+    role_permissions = permission_queryset_to_codes(
+        Permission.objects.filter(group__user=user).distinct()
+    )
+    granted_permissions = direct_permissions | role_permissions
+    denied_permissions = permission_queryset_to_codes(user.denied_permissions.all())
+    return sorted(granted_permissions - denied_permissions)
+
+
+def user_has_effective_permission(user, permission):
+    if not user or not getattr(user, "is_authenticated", False):
+        return False
+    if user.is_superuser:
+        return True
+    return permission in get_effective_permissions(user)
+
+
+def get_role_permission_ids(user):
+    permission_ids = user.groups.values_list("permissions__id", flat=True).distinct()
+    return sorted(permission_id for permission_id in permission_ids if permission_id is not None)
 
 
 def get_client_ip(request):

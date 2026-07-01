@@ -78,6 +78,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import { usePmeTemplateStore } from 'src/stores/pme/template'
 import { documentRoute } from 'src/router/routeHelpers'
+import { PAGE_ACCESS } from 'src/router/pageAccess'
 import { useAuthStore } from 'src/stores/auth'
 import { Gauge, 
          UsersRound, 
@@ -118,36 +119,30 @@ function toggleDrawer() {
 const pmeTemplateStore = usePmeTemplateStore()
 
 const links = [
-    { icon: Gauge, text: 'Dashboard', to: '/admin/dashboard' },
+    { icon: Gauge, text: 'Dashboard', to: '/admin/dashboard', meta: PAGE_ACCESS.dashboard },
     {
         icon: UsersRound,
         text: 'User Management',
         to: '/admin/users',
-        meta: { requiredPermission: 'authentication.view_user' },
+        meta: PAGE_ACCESS.users,
     },
     {
         icon: ShieldUser,
         text: 'Role Management',
         to: '/admin/roles',
-        meta: { requiredPermission: 'auth.view_group' },
+        meta: PAGE_ACCESS.roles,
     },
     {
         icon: KeyRound,
         text: 'Permission Management',
         to: '/admin/permissions',
-        meta: {
-            requiredPermissions: [
-                'auth.view_permission',
-                'authentication.view_user',
-                'authentication.change_user',
-            ],
-        },
+        meta: PAGE_ACCESS.permissions,
     },
     {
         icon: FileClock,
         text: 'Audit Logs',
         to: '/admin/audit-logs',
-        meta: { requiresSuperAdmin: true },
+        meta: PAGE_ACCESS.auditLogs,
     },
 ]
 

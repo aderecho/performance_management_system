@@ -1,6 +1,6 @@
 import uuid
 from django.db import models
-from django.contrib.auth.models import BaseUserManager, AbstractBaseUser, PermissionsMixin
+from django.contrib.auth.models import BaseUserManager, AbstractBaseUser, PermissionsMixin, Permission
 
 # class User(AbstractUser):
 #     id = models.UUIDField(
@@ -31,6 +31,12 @@ class User(AbstractBaseUser, PermissionsMixin):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     email = models.EmailField(unique=True)
+    denied_permissions = models.ManyToManyField(
+        Permission,
+        blank=True,
+        related_name="denied_user_set",
+        verbose_name="denied permissions",
+    )
 
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)

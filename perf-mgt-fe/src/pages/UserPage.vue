@@ -95,7 +95,7 @@
         <q-td :props="props">
           <div class="row items-center gap-2">
             <q-chip
-              v-for="role in roleStore.roleNamesByIds(props.row.role_ids)"
+              v-for="role in props.row.role_names || []"
               :key="role"
               color="blue-1"
               text-color="blue-9"
@@ -104,7 +104,7 @@
             >
               {{ role }}
             </q-chip>
-            <span v-if="!roleStore.roleNamesByIds(props.row.role_ids).length">-</span>
+            <span v-if="!(props.row.role_names || []).length">-</span>
           </div>
         </q-td>
       </template>
@@ -116,12 +116,20 @@
             <q-tooltip>View</q-tooltip>
           </q-btn>
 
-          <q-btn size="sm" flat round color="secondary" @click="handleEdit(props.row)">
+          <q-btn
+            v-if="canChangeUser"
+            size="sm"
+            flat
+            round
+            color="secondary"
+            @click="handleEdit(props.row)"
+          >
             <SquarePen :size="18" :stroke-width="2" />
             <q-tooltip>Edit</q-tooltip>
           </q-btn>
 
           <q-btn
+            v-if="canDeleteUser"
             size="sm"
             flat
             round
@@ -147,6 +155,7 @@
     </ViewDialog>
 
     <FormDialog
+      v-if="showFormDialog"
       v-model="showFormDialog"
       title="User"
       :data="selectedUser"
@@ -178,8 +187,8 @@ import FormDialog from 'src/components/admin/FormDialog.vue'
 import UserFilters from 'src/components/admin/UserFilters.vue'
 import AppTable from 'src/components/admin/MarkupTable.vue'
 import DeleteConfirmDialog from 'src/components/DeleteConfirmDialog.vue'
+import { useAuthStore } from 'src/stores/auth'
 import { useUserStore } from 'src/stores/user'
-import { useRoleStore } from 'src/stores/role'
 import {
   Eye,
   SquarePen,
@@ -194,8 +203,8 @@ import {
 } from 'lucide-vue-next'
 import { notify } from 'src/utils/notify'
 
+const authStore = useAuthStore()
 const userStore = useUserStore()
-const roleStore = useRoleStore()
 const showViewDialog = ref(false)
 const selectedUser = ref(null)
 const showFormDialog = ref(false)
@@ -206,6 +215,16 @@ const filters = ref({
   is_active: null,
   is_superuser: null,
 })
+
+const canCreateUser = computed(() =>
+  authStore.canAccess({ requiredPermission: 'authentication.add_user' }),
+)
+const canChangeUser = computed(() =>
+  authStore.canAccess({ requiredPermission: 'authentication.change_user' }),
+)
+const canDeleteUser = computed(() =>
+  authStore.canAccess({ requiredPermission: 'authentication.delete_user' }),
+)
 
 const fullName = computed(() => {
   const p = selectedUser.value?.profile || {}
@@ -234,7 +253,7 @@ const columns = [
   {
     name: 'roles',
     label: 'Roles',
-    field: (row) => roleStore.roleNamesByIds(row.role_ids).join(', ') || '-',
+    field: (row) => row.role_names?.join(', ') || '-',
     align: 'left',
   },
   { name: 'is_active', label: 'Status', field: 'is_active', align: 'center' },
@@ -391,12 +410,13 @@ const buttons = [
     color: 'primary',
     onClick: handleCreate,
     tooltip: 'Create new User',
+    permission: () => canCreateUser.value,
   },
 ]
 
 onMounted(async () => {
   try {
-    await Promise.all([loadUsers(), roleStore.fetchRoles()])
+    await loadUsers()
   } catch {
     notify.negative('Failed to load users. Please try again.')
   }

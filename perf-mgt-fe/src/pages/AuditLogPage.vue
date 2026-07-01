@@ -10,7 +10,7 @@
       :show-filter="false"
     />
 
-    <div class="audit-filters row q-col-gutter-sm q-mb-md">
+    <div v-if="canViewAuditLogs" class="audit-filters row q-col-gutter-sm q-mb-md">
       <div class="col-12 col-sm-6 col-md-2">
         <q-select
           v-model="filters.module"
@@ -101,7 +101,7 @@
     </div>
 
     <q-banner
-      v-if="auditLogStore.error.list"
+      v-if="canViewAuditLogs && auditLogStore.error.list"
       rounded
       class="bg-red-1 text-red-9 q-mb-md"
     >
@@ -109,6 +109,7 @@
     </q-banner>
 
     <AppTable
+      v-if="canViewAuditLogs"
       title="System Activity"
       :rows="auditLogStore.logs"
       :columns="columns"
@@ -237,13 +238,19 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import PageComboHeader from 'src/components/PageComboHeader.vue'
 import AppTable from 'src/components/admin/MarkupTable.vue'
+import { useAuthStore } from 'src/stores/auth'
 import { useAuditLogStore } from 'src/stores/auditLog'
 import { notify } from 'src/utils/notify'
 import { Eye, RefreshCw, ShieldCheck } from 'lucide-vue-next'
 
+const authStore = useAuthStore()
 const auditLogStore = useAuditLogStore()
 const selectedLog = ref(null)
 const showDetails = ref(false)
+
+const canViewAuditLogs = computed(() =>
+  authStore.canAccess({ requiresSuperAdmin: true }),
+)
 
 const filters = reactive({
   module: null,
@@ -377,5 +384,9 @@ async function loadAuditLogs() {
   }
 }
 
-onMounted(loadAuditLogs)
+onMounted(() => {
+  if (canViewAuditLogs.value) {
+    loadAuditLogs()
+  }
+})
 </script>

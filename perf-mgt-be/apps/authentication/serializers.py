@@ -5,6 +5,7 @@ from django.db import transaction
 from apps.core.models import Profile, UserUnit, Unit
 from apps.core.serializers import ProfileSerializer, UserUnitSerializer
 from .models import AuditLog
+from .services import get_effective_permissions, get_role_permission_ids
 
 User = get_user_model()
 
@@ -128,8 +129,11 @@ class UserSerializer(serializers.ModelSerializer):
     primary_unit = serializers.SerializerMethodField()
     role_ids = serializers.SerializerMethodField()
     direct_permission_ids = serializers.SerializerMethodField()
+    role_permission_ids = serializers.SerializerMethodField()
+    denied_permission_ids = serializers.SerializerMethodField()
     effective_permissions = serializers.SerializerMethodField()
     permission_count = serializers.SerializerMethodField()
+    role_names = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -139,7 +143,10 @@ class UserSerializer(serializers.ModelSerializer):
             'is_active', 
             'is_superuser', 
             'role_ids',
+            'role_names',
             'direct_permission_ids',
+            'role_permission_ids',
+            'denied_permission_ids',
             'effective_permissions',
             'permission_count',
             'profile', 
@@ -148,6 +155,8 @@ class UserSerializer(serializers.ModelSerializer):
             'created_at', 
             'updated_at'
         ]
+    
+    
 
     def get_primary_unit(self, obj):
         primary = obj.user_units.filter(is_primary=True, is_active=True).first()
@@ -165,11 +174,26 @@ class UserSerializer(serializers.ModelSerializer):
             ).values_list("id", flat=True)
         )
 
+    def get_role_permission_ids(self, obj):
+        return get_role_permission_ids(obj)
+
+    def get_denied_permission_ids(self, obj):
+        return list(
+            obj.denied_permissions.order_by(
+                "content_type__app_label",
+                "content_type__model",
+                "codename",
+            ).values_list("id", flat=True)
+        )
+
     def get_effective_permissions(self, obj):
-        return sorted(obj.get_all_permissions())
+        return get_effective_permissions(obj)
 
     def get_permission_count(self, obj):
-        return len(obj.get_all_permissions())
+        return len(get_effective_permissions(obj))
+    
+    def get_role_names(self, obj):
+        return list(obj.groups.order_by("name").values_list("name", flat=True))
 
 
 class UserProfileCreateSerializer(serializers.Serializer):
@@ -231,6 +255,12 @@ class UserCreateSerializer(serializers.ModelSerializer):
         write_only=True,
         required=False,
     )
+    denied_permission_ids = serializers.PrimaryKeyRelatedField(
+        queryset=Permission.objects.all(),
+        many=True,
+        write_only=True,
+        required=False,
+    )
     profile = UserProfileCreateSerializer(write_only=True)
     user_units = UserUnitCreateSerializer(
         many=True,
@@ -248,6 +278,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
             "is_superuser",
             "role_ids",
             "user_permission_ids",
+            "denied_permission_ids",
             "profile",
             "user_units",
         ]
@@ -258,6 +289,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
         user_units_data = validated_data.pop("user_units", [])
         role_ids = validated_data.pop("role_ids", [])
         user_permission_ids = validated_data.pop("user_permission_ids", [])
+        denied_permission_ids = validated_data.pop("denied_permission_ids", [])
         password = validated_data.pop("password")
 
         user = User.objects.create_user(
@@ -285,6 +317,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
 
         user.groups.set(role_ids)
         user.user_permissions.set(user_permission_ids)
+        user.denied_permissions.set(denied_permission_ids)
 
         return user
 
@@ -308,6 +341,12 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         write_only=True,
         required=False,
     )
+    denied_permission_ids = serializers.PrimaryKeyRelatedField(
+        queryset=Permission.objects.all(),
+        many=True,
+        write_only=True,
+        required=False,
+    )
     profile = UserProfileCreateSerializer(write_only=True, required=False)
     user_units = UserUnitCreateSerializer(
         many=True,
@@ -325,6 +364,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             "is_superuser",
             "role_ids",
             "user_permission_ids",
+            "denied_permission_ids",
             "profile",
             "user_units",
         ]
@@ -335,6 +375,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         user_units_data = validated_data.pop("user_units", None)
         role_ids = validated_data.pop("role_ids", None)
         user_permission_ids = validated_data.pop("user_permission_ids", None)
+        denied_permission_ids = validated_data.pop("denied_permission_ids", None)
         password = validated_data.pop("password", None)
 
         for attr, value in validated_data.items():
@@ -364,5 +405,8 @@ class UserUpdateSerializer(serializers.ModelSerializer):
 
         if user_permission_ids is not None:
             instance.user_permissions.set(user_permission_ids)
+
+        if denied_permission_ids is not None:
+            instance.denied_permissions.set(denied_permission_ids)
 
         return instance

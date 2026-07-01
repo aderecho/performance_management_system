@@ -4,11 +4,13 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated, AllowAny, BasePermission
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.settings import api_settings
 from rest_framework import viewsets
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import Group, Permission
+from django.conf import settings
 from django.db import connection
 from django.http import JsonResponse
 
@@ -27,9 +29,75 @@ from .serializers import (
     UserUpdateSerializer,
 )
 from .models import AuditLog
-from .services import AuditLogService, UserDashboardService
+from .services import (
+    AuditLogService,
+    UserDashboardService,
+    get_effective_permissions,
+    user_has_effective_permission,
+)
 
 User = get_user_model()
+
+JWT_COOKIE_SAMESITE = "Lax"
+JWT_COOKIE_PATH = "/"
+
+
+def jwt_cookie_max_age(setting_name):
+    lifetime = settings.SIMPLE_JWT[setting_name]
+    return int(lifetime.total_seconds())
+
+
+def set_access_cookie(response, access_token):
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=settings.SESSION_COOKIE_SECURE,
+        samesite=JWT_COOKIE_SAMESITE,
+        max_age=jwt_cookie_max_age("ACCESS_TOKEN_LIFETIME"),
+        path=JWT_COOKIE_PATH,
+    )
+
+
+def set_refresh_cookie(response, refresh_token):
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=settings.SESSION_COOKIE_SECURE,
+        samesite=JWT_COOKIE_SAMESITE,
+        max_age=jwt_cookie_max_age("REFRESH_TOKEN_LIFETIME"),
+        path=JWT_COOKIE_PATH,
+    )
+
+
+def clear_jwt_cookies(response):
+    response.delete_cookie(
+        "access_token",
+        path=JWT_COOKIE_PATH,
+        samesite=JWT_COOKIE_SAMESITE,
+    )
+    response.delete_cookie(
+        "refresh_token",
+        path=JWT_COOKIE_PATH,
+        samesite=JWT_COOKIE_SAMESITE,
+    )
+
+
+def rotate_refresh_token(refresh):
+    if not api_settings.ROTATE_REFRESH_TOKENS:
+        return None
+
+    if api_settings.BLACKLIST_AFTER_ROTATION:
+        try:
+            refresh.blacklist()
+        except AttributeError:
+            pass
+
+    refresh.set_jti()
+    refresh.set_exp()
+    refresh.set_iat()
+    return str(refresh)
 
 
 class IsSuperuserOrActionPermission(BasePermission):
@@ -42,9 +110,16 @@ class IsSuperuserOrActionPermission(BasePermission):
         if user.is_superuser:
             return True
 
-        required_permissions = getattr(view, "action_permissions", {}).get(
-            getattr(view, "action", None)
-        )
+        permission_resolver = getattr(view, "get_action_permissions", None)
+        if callable(permission_resolver):
+            required_permissions = permission_resolver(request)
+        else:
+            required_permissions = None
+
+        if required_permissions is None:
+            required_permissions = getattr(view, "action_permissions", {}).get(
+                getattr(view, "action", None)
+            )
         required_permission = getattr(view, "required_permission", None)
 
         if required_permissions is None and required_permission:
@@ -54,7 +129,10 @@ class IsSuperuserOrActionPermission(BasePermission):
             required_permissions = [required_permissions]
 
         if required_permissions:
-            return all(user.has_perm(permission) for permission in required_permissions)
+            return all(
+                user_has_effective_permission(user, permission)
+                for permission in required_permissions
+            )
 
         return user.is_staff
 
@@ -95,24 +173,8 @@ class LoginView(APIView):
         refresh_token = str(refresh)
 
         response = JsonResponse({"message": "Login successful"})
-
-        # Set secure cookies
-        response.set_cookie(
-            key="access_token",
-            value=access_token,
-            httponly=True,
-            secure=False,  # Set to True in production (HTTPS)
-            samesite="Lax", #Lax
-            max_age=60 * 30,  # 30 minutes
-        )
-        response.set_cookie(
-            key="refresh_token",
-            value=refresh_token,
-            httponly=True,
-            secure=False,  # Set to True in production (HTTPS)
-            samesite="Lax", #Lax
-            max_age=60 * 60 * 24 * 7,  # 7 days
-        )
+        set_access_cookie(response, access_token)
+        set_refresh_cookie(response, refresh_token)
 
         AuditLogService.record(
             request=request,
@@ -163,9 +225,7 @@ class LogoutView(APIView):
             status=status.HTTP_200_OK
         )
 
-        # Clear cookies
-        response.delete_cookie("access_token")
-        response.delete_cookie("refresh_token")
+        clear_jwt_cookies(response)
 
         if auth_user:
             AuditLogService.record(
@@ -198,7 +258,7 @@ class SessionCheckView(APIView):
                     "last_name": user.profile.last_name,
                     "is_superadmin": user.is_superuser,
                     "roles": list(user.groups.values_list("name", flat=True)),
-                    "permissions": list(user.get_all_permissions()),
+                    "permissions": get_effective_permissions(user),
                 }
             }, status=status.HTTP_200_OK)
         else:
@@ -212,7 +272,6 @@ class RefreshTokenView(APIView):
     authentication_classes = []
 
     def post(self, request):
-        from rest_framework_simplejwt.tokens import RefreshToken
         serializer = RefreshTokenCookieSerializer(data=request.COOKIES)
         serializer.is_valid(raise_exception=True)
         refresh_token = serializer.validated_data.get("refresh_token")
@@ -223,6 +282,7 @@ class RefreshTokenView(APIView):
         try:
             refresh = RefreshToken(refresh_token)
             access_token = str(refresh.access_token)
+            rotated_refresh_token = rotate_refresh_token(refresh)
         except Exception:
             return Response(
                 {"error": "Invalid refresh token"},
@@ -230,14 +290,9 @@ class RefreshTokenView(APIView):
             )
 
         response = JsonResponse({"message": "Token refreshed"})
-        response.set_cookie(
-            key="access_token",
-            value=access_token,
-            httponly=True,
-            secure=False, # True in production
-            samesite="Lax",
-            max_age=60 * 30,  # 30 minutes
-        )
+        set_access_cookie(response, access_token)
+        if rotated_refresh_token:
+            set_refresh_cookie(response, rotated_refresh_token)
         return response
     
 
@@ -248,8 +303,10 @@ class UserViewSet(viewsets.ModelViewSet):
         "groups",
         "groups__permissions__content_type",
         "user_permissions__content_type",
+        "denied_permissions__content_type",
     )
 
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsSuperuserOrActionPermission]
     action_permissions = {
         "list": "authentication.view_user",
@@ -259,6 +316,11 @@ class UserViewSet(viewsets.ModelViewSet):
         "partial_update": "authentication.change_user",
         "destroy": "authentication.delete_user",
     }
+
+    def get_action_permissions(self, request):
+        if self.action == "partial_update" and set(request.data.keys()) == {"is_active"}:
+            return "authentication.delete_user"
+        return None
 
     def get_serializer_class(self):
         if self.action == "create":
@@ -289,6 +351,7 @@ class UserViewSet(viewsets.ModelViewSet):
                 "fields": changed_payload_fields(request.data, excluded={"password"}),
                 "role_count": user.groups.count(),
                 "direct_permission_count": user.user_permissions.count(),
+                "denied_permission_count": user.denied_permissions.count(),
             },
         )
 
@@ -325,6 +388,7 @@ class UserViewSet(viewsets.ModelViewSet):
                 "fields": fields,
                 "role_count": user.groups.count(),
                 "direct_permission_count": user.user_permissions.count(),
+                "denied_permission_count": user.denied_permissions.count(),
                 "is_active": user.is_active,
             },
         )
@@ -334,6 +398,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
 
 class UserDashboardStatsView(APIView):
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsSuperuserOrActionPermission]
     required_permission = "authentication.view_user"
 
@@ -344,6 +409,7 @@ class UserDashboardStatsView(APIView):
 
 class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = AuditLogSerializer
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsSuperuser]
 
     def get_queryset(self):
@@ -354,6 +420,7 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
 
 class RoleViewSet(viewsets.ModelViewSet):
     serializer_class = RoleSerializer
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsSuperuserOrActionPermission]
     action_permissions = {
         "list": "auth.view_group",
@@ -363,6 +430,17 @@ class RoleViewSet(viewsets.ModelViewSet):
         "partial_update": "auth.change_group",
         "destroy": "auth.delete_group",
     }
+
+    def get_action_permissions(self, request):
+        if self.action == "list":
+            user = request.user
+            if user_has_effective_permission(user, "auth.view_group"):
+                return "auth.view_group"
+            if user_has_effective_permission(user, "authentication.add_user"):
+                return "authentication.add_user"
+            if user_has_effective_permission(user, "authentication.change_user"):
+                return "authentication.change_user"
+        return None
 
     def get_queryset(self):
         return Group.objects.prefetch_related(
@@ -458,6 +536,7 @@ class RoleViewSet(viewsets.ModelViewSet):
 
 class PermissionViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = PermissionSerializer
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsSuperuserOrActionPermission]
     action_permissions = {
         "list": "auth.view_permission",

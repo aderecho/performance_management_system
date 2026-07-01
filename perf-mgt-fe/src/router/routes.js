@@ -1,3 +1,5 @@
+import { PAGE_ACCESS } from './pageAccess'
+
 const routes = [
   {
     path: '/',
@@ -9,42 +11,38 @@ const routes = [
         path: '/documents/:documentId',
         name: 'documents.show',
         component: () => import('pages/PmePage.vue'),
-        props: true
+        props: true,
+        meta: PAGE_ACCESS.documents,
       },
       {
         path: '/admin/dashboard',
         name: 'dashboard',
-        component: () => import('pages/DashboardPage.vue')
+        component: () => import('pages/DashboardPage.vue'),
+        meta: PAGE_ACCESS.dashboard,
       },
       {
         path: '/admin/users',
         name: 'users',
         component: () => import('pages/UserPage.vue'),
-        meta: { requiredPermission: 'authentication.view_user' }
+        meta: PAGE_ACCESS.users,
       },
       {
         path: '/admin/roles',
         name: 'roles',
         component: () => import('pages/RolePage.vue'),
-        meta: { requiredPermission: 'auth.view_group' }
+        meta: PAGE_ACCESS.roles,
       },
       {
         path: '/admin/permissions',
         name: 'permissions',
         component: () => import('pages/PermissionPage.vue'),
-        meta: {
-          requiredPermissions: [
-            'auth.view_permission',
-            'authentication.view_user',
-            'authentication.change_user'
-          ]
-        }
+        meta: PAGE_ACCESS.permissions,
       },
       {
         path: '/admin/audit-logs',
         name: 'audit-logs',
         component: () => import('pages/AuditLogPage.vue'),
-        meta: { requiresSuperAdmin: true }
+        meta: PAGE_ACCESS.auditLogs,
       }
     ],
   },
