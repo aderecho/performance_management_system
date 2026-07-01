@@ -10,6 +10,7 @@
                 { label: pmeDocumentStore.documentWithItems.name || '' }
             ]"
             @apply="handleFilter"
+            :can-add-initiative="canCreateInitiative"
             @add-initiative="handleAddInitiative"
             >
                 <!-- TITLE -->
@@ -56,6 +57,10 @@
                 v-model="showInitiativeModal"
                 :indicator="selectedIndicator"
                 :initiatives="initiativeStore.initiatives"
+                :can-change-initiative="canChangeInitiative"
+                :can-delete-initiative="canDeleteInitiative"
+                :can-submit-accomplishment="canCreateInitiativeAccomplishment"
+                :can-revert-accomplishment="canDeleteInitiativeAccomplishment"
                 @edit="handleEditInitiative"
                 @accomplished="handleMarkAsAccomplished"
                 @deleted="handleDeleteInitiative"
@@ -75,8 +80,9 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { useAuthStore } from 'src/stores/auth'
 import { usePmeDocumentStore } from 'src/stores/pme/pmeDocument'
 import { useInitiativeStore } from 'src/stores/pme/initiative'
 import { notify } from 'src/utils/notify'
@@ -90,6 +96,7 @@ import AccomplishmentFormModal from 'src/components/pme/AccomplishmentFormModal.
 
 const route = useRoute()
 
+const authStore = useAuthStore()
 const pmeDocumentStore = usePmeDocumentStore()
 const initiativeStore = useInitiativeStore()
 
@@ -98,6 +105,22 @@ const showInitiativeModal = ref(false)
 const showAccomplishmentFormModal = ref(false)
 const selectedIndicator = ref(null)
 const selectedInitiative = ref(null)
+
+const canCreateInitiative = computed(() =>
+  authStore.canAccess({ requiredPermission: 'pme.add_initiative' }),
+)
+const canChangeInitiative = computed(() =>
+  authStore.canAccess({ requiredPermission: 'pme.change_initiative' }),
+)
+const canDeleteInitiative = computed(() =>
+  authStore.canAccess({ requiredPermission: 'pme.delete_initiative' }),
+)
+const canCreateInitiativeAccomplishment = computed(() =>
+  authStore.canAccess({ requiredPermission: 'pme.add_initiativeaccomplishment' }),
+)
+const canDeleteInitiativeAccomplishment = computed(() =>
+  authStore.canAccess({ requiredPermission: 'pme.delete_initiativeaccomplishment' }),
+)
 
 function resetInitiativeUi() {
   showInitiativeFormModal.value = false

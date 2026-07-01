@@ -55,6 +55,7 @@
           <template #body-cell-actions="props">
             <q-td align="center">
               <q-btn
+                v-if="actionPermission(props.row)"
                 dense
                 flat
                 round
@@ -81,6 +82,7 @@
               </q-btn>
 
               <q-btn
+                v-if="canChangeInitiative"
                 dense
                 flat
                 round
@@ -92,6 +94,7 @@
               </q-btn>
 
               <q-btn
+                v-if="canDeleteInitiative"
                 dense
                 flat
                 round
@@ -194,12 +197,6 @@ import DeleteConfirmDialog from 'src/components/DeleteConfirmDialog.vue'
 import RevertConfirmDialog from 'src/components/RevertConfirmDialog.vue'
 import { Check, FileCheck2, ClipboardCheck, History, RotateCcw, SquarePen, Trash2, X } from 'lucide-vue-next'
 
-defineProps({
-  modelValue: Boolean,
-  indicator: { type: Object, default: () => ({}) },
-  initiatives: { type: Array, default: () => [] },
-})
-
 const emit = defineEmits(['update:modelValue', 'edit', 'deleted', 'accomplished', 'reverted'])
 
 const columns = ref([
@@ -265,6 +262,16 @@ const columns = ref([
   { name: 'actions', label: 'Actions', align: 'center', sortable: false },
 ])
 
+const props = defineProps({
+  modelValue: Boolean,
+  indicator: { type: Object, default: () => ({}) },
+  initiatives: { type: Array, default: () => [] },
+  canChangeInitiative: { type: Boolean, default: true },
+  canDeleteInitiative: { type: Boolean, default: true },
+  canSubmitAccomplishment: { type: Boolean, default: true },
+  canRevertAccomplishment: { type: Boolean, default: true },
+})
+
 const formatReportingPeriod = (row) => {
   const rp = row?.reporting_period_detail
   if (!rp) return '---'
@@ -297,6 +304,9 @@ const onDeleteClick = (row) => {
   selectedInitiative.value = row
   showDeleteDialog.value = true
 }
+
+const actionPermission = (row) =>
+  row?.is_accomplished ? props.canRevertAccomplishment : props.canSubmitAccomplishment
 
 // Mark as accomplished
 const onMarkAsAccomplished = async (row) => {

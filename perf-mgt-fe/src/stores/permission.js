@@ -18,6 +18,13 @@ export const usePermissionStore = defineStore('permissionStore', {
       value: permission.id,
       ...permission,
     })),
+    permissionsByIds: (state) => (permissionIds = []) => {
+      const permissionById = Object.fromEntries(
+        state.permissions.map((permission) => [permission.id, permission]),
+      )
+      const ids = Array.isArray(permissionIds) ? permissionIds : []
+      return ids.map((id) => permissionById[id]).filter(Boolean)
+    },
   },
 
   actions: {

@@ -19,10 +19,13 @@ class UserAdmin(BaseUserAdmin):
                 'is_active',
                 'is_superuser',
                 'groups',
-                'user_permissions'
+                'user_permissions',
+                'denied_permissions',
             )
         }),
     )
+
+    filter_horizontal = ('groups', 'user_permissions', 'denied_permissions')
 
     add_fieldsets = (
         (None, {
