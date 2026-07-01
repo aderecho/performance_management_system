@@ -304,6 +304,29 @@ class RolePermissionCookieAuthTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertGreaterEqual(len(response.data), 1)
 
+    def test_user_with_role_change_permission_can_list_permissions_for_role_form(self):
+        user = self.create_user(
+            "role-permission-editor@example.com",
+            permissions=[self.get_permission("change_group")],
+        )
+        self.login_as(user)
+
+        response = self.client.get(reverse("permission-list"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertGreaterEqual(len(response.data), 1)
+
+    def test_user_with_only_role_view_permission_cannot_list_permission_catalog(self):
+        user = self.create_user(
+            "role-view-permission-denied@example.com",
+            permissions=[self.get_permission("view_group")],
+        )
+        self.login_as(user)
+
+        response = self.client.get(reverse("permission-list"))
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
     def test_denied_permission_removes_role_grant_from_session_and_api_access(self):
         permission = self.get_permission("view_permission")
         role = Group.objects.create(name="Permission Viewer")

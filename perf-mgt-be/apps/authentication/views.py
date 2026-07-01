@@ -543,6 +543,17 @@ class PermissionViewSet(viewsets.ReadOnlyModelViewSet):
         "retrieve": "auth.view_permission",
     }
 
+    def get_action_permissions(self, request):
+        if self.action == "list":
+            user = request.user
+            if user_has_effective_permission(user, "auth.view_permission"):
+                return "auth.view_permission"
+            if user_has_effective_permission(user, "auth.add_group"):
+                return "auth.add_group"
+            if user_has_effective_permission(user, "auth.change_group"):
+                return "auth.change_group"
+        return None
+
     def get_queryset(self):
         return Permission.objects.select_related("content_type").order_by(
             "content_type__app_label",

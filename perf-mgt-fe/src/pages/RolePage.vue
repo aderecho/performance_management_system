@@ -375,6 +375,7 @@ const canChangeRole = computed(() =>
 const canDeleteRole = computed(() =>
   authStore.canAccess({ requiredPermission: 'auth.delete_group' }),
 )
+const canManageRolePermissions = computed(() => canCreateRole.value || canChangeRole.value)
 
 const groupModeOptions = [
   { label: 'By Module', value: 'module', icon: 'widgets' },
@@ -588,7 +589,11 @@ async function confirmToggleStatus() {
 
 onMounted(async () => {
   try {
-    await Promise.all([roleStore.fetchRoles(), permissionStore.fetchPermissions()])
+    const requests = [roleStore.fetchRoles()]
+    if (canManageRolePermissions.value) {
+      requests.push(permissionStore.fetchPermissions())
+    }
+    await Promise.all(requests)
   } catch {
     notify.negative('Failed to load role management data. Please try again.')
   }
