@@ -1,8 +1,8 @@
 <template>
     <q-drawer :model-value="modelValue" @update:model-value="$emit('update:modelValue', $event)" show-if-above bordered
-        :mini="miniState" class="text-dark column no-wrap" :width="300">
+        :mini="miniState" class="bg-surface text-dark column no-wrap" :width="300">
         <!-- OPEN OR CLOSE TOGGLE -->
-        <div class="row items-center q-px-sm q-pt-sm" :class="miniState ? 'justify-center' : 'justify-end'">
+        <!-- <div class="row items-center q-px-sm q-pt-sm" :class="miniState ? 'justify-center' : 'justify-end'">
             <q-btn flat dense round color="dark-grey"
                 :aria-label="miniState ? 'Expand navigation drawer' : 'Collapse navigation drawer'"
                 @click="toggleDrawer">
@@ -10,21 +10,21 @@
                 <PanelLeftClose v-else :size="22" :stroke-width="2" />
                 <q-tooltip>{{ miniState ? 'Expand menu' : 'Collapse menu' }}</q-tooltip>
             </q-btn>
-        </div>
+        </div> -->
 
         <!-- LOGO  -->
         <transition name="drawer-collapse">
-            <div v-if="!miniState" class="flex flex-center q-px-md q-pb-sm">
+            <div v-if="!miniState" class="flex flex-center q-pa-md q-pb-sm">
                 <img :src="UPCLOGO" alt="UPlan360 logo" class="drawer-logo" />
             </div>
         </transition>
 
         <q-scroll-area class="col">
-            <q-list padding class="text-dark q-gutter-y-sm q-px-md">
+            <q-list padding class="text-grey q-gutter-y-sm q-px-md">
                 <!-- ADMIN LINKS-->
                 <div v-if="visibleLinks.length">
                     <q-item v-for="link in visibleLinks" :key="link.text" clickable :to="link.to" class="rounded"
-                        active-class="bg-primary text-white text-weight-medium">
+                        active-class="bg-white text-black text-weight-medium">
                         <q-item-section avatar>
                             <component :is="link.icon" :size="22" :stroke-width="2" />
                         </q-item-section>
@@ -34,38 +34,42 @@
                     </q-item>
                 </div>
 
-                <q-separator v-if="pmeTemplateStore.templates?.length" inset class="q-my-sm" />
-
-                <!-- DOCUMENTS -->
-                <q-expansion-item v-for="template in pmeTemplateStore.templates" :key="template.id" dense-toggle>
+                <!-- ARCHIVED -->
+                <q-expansion-item v-if="canAccessArchived" dense-toggle>
                     <template #header>
                         <q-item-section avatar>
-                            <ScrollText :size="22" :stroke-width="2" />
+                            <FolderArchive :size="22" :stroke-width="2" />
                         </q-item-section>
                         <q-item-section>
-                            <q-item-label>{{ template.name }}</q-item-label>
+                            <q-item-label>Archived</q-item-label>
                         </q-item-section>
                     </template>
-                    <q-item v-for="document in template.documents" :key="document.id" clickable
-                        :to="documentRoute(document.id)">
+                    <q-item clickable :to="{ name: 'archived-initiatives' }" class="rounded"
+                        active-class="bg-white text-black text-weight-medium">
                         <q-item-section>
-                            <q-item-label>{{ document.name }}</q-item-label>
+                            <q-item-label>Initiative</q-item-label>
                         </q-item-section>
                     </q-item>
                 </q-expansion-item>
+
             </q-list>
         </q-scroll-area>
 
         <!-- FOOTER-->
         <transition name="drawer-collapse">
             <div v-if="!miniState" class="q-pa-md">
-                <div class="flex flex-center q-gutter-lg">
-                    <a class="text-primary" href="https://privacy.up.edu.ph" target="_blank">
-                        Privacy Policy
+                <q-separator class="q-mb-md drawer-footer-divider" />
+                <div class="column q-gutter-sm">
+                    <a class="drawer-footer-link" href="https://privacy.up.edu.ph" target="_blank"
+                        rel="noopener noreferrer">
+                        <ShieldCheck :size="18" :stroke-width="2" />
+                        <span>Privacy Policy</span>
                     </a>
 
-                    <a class="text-primary" href="javascript:void(0)">
-                        About the App
+                    <a class="drawer-footer-link" href="https://support.upcebu.edu.ph/open.php?topicId=63"
+                        target="_blank" rel="noopener noreferrer">
+                        <Headset :size="18" :stroke-width="2" />
+                        <span>ITC Support</span>
                     </a>
                 </div>
             </div>
@@ -74,25 +78,23 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
-import { useQuasar } from 'quasar'
-import { usePmeTemplateStore } from 'src/stores/pme/template'
-import { documentRoute } from 'src/router/routeHelpers'
+import { computed, ref } from 'vue'
+// import { useQuasar } from 'quasar'
 import { PAGE_ACCESS } from 'src/router/pageAccess'
 import { useAuthStore } from 'src/stores/auth'
-import { Gauge, 
-         UsersRound, 
-         ShieldUser, 
-         FileClock, 
-         KeyRound, 
-         ScrollText, 
-         PanelLeftClose, 
-         PanelLeftOpen 
+import { Gauge,
+         UsersRound,
+         ShieldUser,
+         FileClock,
+         KeyRound,
+         FileStack,
+         FolderArchive,
+         ShieldCheck,
+         Headset,
         } from 'lucide-vue-next'
-import { notify } from 'src/utils/notify'
 import UPCLOGO from 'assets/UPCLOGO.png'
 
-const $q = useQuasar()
+// const $q = useQuasar()
 const authStore = useAuthStore()
 
 defineProps({
@@ -102,24 +104,22 @@ defineProps({
     }
 })
 
-const emit = defineEmits(['update:modelValue'])
+// const emit = defineEmits(['update:modelValue'])
 
 // Collapsed (mini) state shows only icons on desktop. On mobile the drawer
 // uses overlay mode (mini is ignored), so the toggle closes it instead.
 const miniState = ref(false)
 
-function toggleDrawer() {
-    if ($q.screen.lt.md) {
-        emit('update:modelValue', false)
-    } else {
-        miniState.value = !miniState.value
-    }
-}
-
-const pmeTemplateStore = usePmeTemplateStore()
+// function toggleDrawer() {
+//     if ($q.screen.lt.md) {
+//         emit('update:modelValue', false)
+//     } else {
+//         miniState.value = !miniState.value
+//     }
+// }
 
 const links = [
-    { icon: Gauge, text: 'Dashboard', to: '/admin/dashboard', meta: PAGE_ACCESS.dashboard },
+    { icon: Gauge, text: 'Executive Dashboard', to: '/admin/dashboard', meta: PAGE_ACCESS.dashboard },
     {
         icon: UsersRound,
         text: 'User Management',
@@ -144,20 +144,46 @@ const links = [
         to: '/admin/audit-logs',
         meta: PAGE_ACCESS.auditLogs,
     },
+    {
+        icon: FileStack,
+        text: 'Documents',
+        to: '/documents',
+        meta: PAGE_ACCESS.documents,
+    },
 ]
 
 const visibleLinks = computed(() => {
     return links.filter((link) => !link.meta || authStore.canAccess(link.meta))
 })
 
-onMounted(async () => {
-    // preserve original behavior
-    if (!pmeTemplateStore.templates?.length) {
-        try {
-            await pmeTemplateStore.fetchTemplates()
-        } catch {
-            notify.negative('Failed to load PME documents. Please try again.')
-        }
-    }
-})
+const canAccessArchived = computed(() => authStore.canAccess(PAGE_ACCESS.archivedInitiatives))
 </script>
+
+<style scoped>
+.drawer-footer-divider {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.drawer-footer-link {
+    align-items: center;
+    border-radius: 10px;
+    color: rgba(255, 255, 255, 0.75);
+    display: flex;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    gap: 10px;
+    padding: 8px 12px;
+    text-decoration: none;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.drawer-footer-link:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+}
+
+.drawer-footer-link:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.7);
+    outline-offset: 2px;
+}
+</style>

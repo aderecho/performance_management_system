@@ -17,4 +17,7 @@ export const PAGE_ACCESS = Object.freeze({
   auditLogs: {
     requiresSuperAdmin: true,
   },
+  archivedInitiatives: {
+    requiredPermission: 'pme.view_initiative',
+  },
 })

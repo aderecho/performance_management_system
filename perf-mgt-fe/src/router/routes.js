@@ -8,6 +8,12 @@ const routes = [
     meta: { requiresAuth: true },
     children: [
       {
+        path: '/documents',
+        name: 'documents',
+        component: () => import('pages/DocumentPage.vue'),
+        meta: PAGE_ACCESS.documents,
+      },
+      {
         path: '/documents/:documentId',
         name: 'documents.show',
         component: () => import('pages/PmePage.vue'),
@@ -43,6 +49,12 @@ const routes = [
         name: 'audit-logs',
         component: () => import('pages/AuditLogPage.vue'),
         meta: PAGE_ACCESS.auditLogs,
+      },
+      {
+        path: '/admin/archived/initiatives',
+        name: 'archived-initiatives',
+        component: () => import('pages/ArchivedInitiativePage.vue'),
+        meta: PAGE_ACCESS.archivedInitiatives,
       }
     ],
   },

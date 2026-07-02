@@ -84,6 +84,14 @@
   background-color: $soft-purple;
 }
 
+.bg-soft-red {
+  background-color: $soft-red;
+}
+
+.bg-soft-amber {
+  background-color: $soft-amber;
+}
+
 .bg-surface {
   background-color: $surface;
 }
@@ -282,6 +290,30 @@
   overflow-wrap: anywhere;
 }
 
+
+// PME INITIATIVE FORM MODAL
+.pme-initiative-dialog {
+  max-width: 95vw;
+  width: 640px;
+}
+
+.pme-initiative-header-icon {
+  align-items: center;
+  background: $soft-purple;
+  border-radius: 12px;
+  color: #7e22ce;
+  display: flex;
+  flex: none;
+  height: 44px;
+  justify-content: center;
+  width: 44px;
+}
+
+.pme-initiative-body {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
 .pme-accomplishment-dialog {
   max-width: 94vw;
   overflow: hidden;
@@ -352,6 +384,77 @@
     align-items: stretch;
     flex-direction: column;
   }
+}
+
+// PME INITIATIVE LIST MODAL
+
+.q-dialog__inner > .pme-initiative-list-dialog {
+  max-width: 95vw;
+  width: 1200px;
+}
+
+.q-dialog__inner > .pme-history-dialog {
+  max-width: 92vw;
+  width: 760px;
+}
+
+.pme-initiative-list-body {
+  border: 1px solid #e6e9ef;
+  overflow: hidden;
+}
+
+.pme-initiative-list-actions {
+  border-top: 1px solid #edf0f4;
+}
+
+.pme-initiative-list-table thead th {
+  background-color: $surface;
+  color: #fff;
+}
+
+.pme-initiative-list-table .wrap-cell {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.pme-initiative-list-table .initiative-col {
+  min-width: 220px;
+}
+
+.pme-initiative-list-table .reporting-period-col {
+  min-width: 160px;
+}
+
+.pme-status-badge {
+  font-weight: 600;
+  padding: 4px 10px;
+}
+
+.pme-status-badge--done {
+  background: $soft-green;
+  color: #15803d;
+}
+
+.pme-status-badge--pending {
+  background: $soft-amber;
+  color: #b45309;
+}
+
+.pme-history-table {
+  max-height: 60vh;
+}
+
+.pme-history-table thead tr th {
+  background-color: $surface;
+  color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.pme-history-evidence-cell {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 // DASHBOARD
