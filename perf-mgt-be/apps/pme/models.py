@@ -101,6 +101,29 @@ class Document(models.Model):
         return f"{self.name} ({self.template.name})"
 
 
+class DashboardEmbed(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    slug = models.SlugField(max_length=100, unique=True)
+    name = models.CharField(max_length=255)
+    src = models.URLField(max_length=1000)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="dashboard_embeds",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name"]
+        indexes = [
+            models.Index(fields=["slug"]),
+        ]
+
+    def __str__(self):
+        return self.name
+
+
 class Item(models.Model):
     """
     Actual nodes in the framework. Adjacency List model

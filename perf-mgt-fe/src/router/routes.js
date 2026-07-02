@@ -27,6 +27,18 @@ const routes = [
         meta: PAGE_ACCESS.dashboard,
       },
       {
+        path: '/admin/dashboards/:dashboardSlug',
+        name: 'embedded-dashboard',
+        component: () => import('pages/EmbeddedDashboardPage.vue'),
+        meta: PAGE_ACCESS.dashboard,
+      },
+      {
+        path: '/admin/settings',
+        name: 'settings',
+        component: () => import('pages/SettingsPage.vue'),
+        meta: PAGE_ACCESS.settings,
+      },
+      {
         path: '/admin/users',
         name: 'users',
         component: () => import('pages/UserPage.vue'),

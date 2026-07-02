@@ -21,6 +21,31 @@
 
         <q-scroll-area class="col">
             <q-list padding class="text-grey q-gutter-y-sm q-px-md">
+                <!-- DASHBOARDS -->
+                <q-expansion-item v-if="canAccessDashboard" dense-toggle>
+                    <template #header>
+                        <q-item-section avatar>
+                            <Gauge :size="22" :stroke-width="2" />
+                        </q-item-section>
+                        <q-item-section>
+                            <q-item-label>Executive Dashboard</q-item-label>
+                        </q-item-section>
+                    </template>
+                    <q-item clickable :to="{ name: 'dashboard' }" class="rounded"
+                        active-class="bg-white text-black text-weight-medium">
+                        <q-item-section>
+                            <q-item-label>Performance Dashboard</q-item-label>
+                        </q-item-section>
+                    </q-item>
+                    <q-item v-for="dashboard in dashboardEmbedStore.dashboards" :key="dashboard.slug" clickable
+                        :to="{ name: 'embedded-dashboard', params: { dashboardSlug: dashboard.slug } }" class="rounded"
+                        active-class="bg-white text-black text-weight-medium">
+                        <q-item-section>
+                            <q-item-label>{{ dashboard.name }}</q-item-label>
+                        </q-item-section>
+                    </q-item>
+                </q-expansion-item>
+
                 <!-- ADMIN LINKS-->
                 <div v-if="visibleLinks.length">
                     <q-item v-for="link in visibleLinks" :key="link.text" clickable :to="link.to" class="rounded"
@@ -78,24 +103,28 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 // import { useQuasar } from 'quasar'
 import { PAGE_ACCESS } from 'src/router/pageAccess'
 import { useAuthStore } from 'src/stores/auth'
-import { Gauge,
-         UsersRound,
-         ShieldUser,
-         FileClock,
-         KeyRound,
-         FileStack,
-         FolderArchive,
-         ShieldCheck,
-         Headset,
-        } from 'lucide-vue-next'
+import { useDashboardEmbedStore } from 'src/stores/dashboardEmbed'
+import {
+    Gauge,
+    UsersRound,
+    ShieldUser,
+    FileClock,
+    KeyRound,
+    FileStack,
+    FolderArchive,
+    Settings,
+    ShieldCheck,
+    Headset,
+} from 'lucide-vue-next'
 import UPCLOGO from 'assets/UPCLOGO.png'
 
 // const $q = useQuasar()
 const authStore = useAuthStore()
+const dashboardEmbedStore = useDashboardEmbedStore()
 
 defineProps({
     modelValue: {
@@ -119,7 +148,12 @@ const miniState = ref(false)
 // }
 
 const links = [
-    { icon: Gauge, text: 'Executive Dashboard', to: '/admin/dashboard', meta: PAGE_ACCESS.dashboard },
+    {
+        icon: FileStack,
+        text: 'Documents',
+        to: '/documents',
+        meta: PAGE_ACCESS.documents,
+    },
     {
         icon: UsersRound,
         text: 'User Management',
@@ -145,10 +179,10 @@ const links = [
         meta: PAGE_ACCESS.auditLogs,
     },
     {
-        icon: FileStack,
-        text: 'Documents',
-        to: '/documents',
-        meta: PAGE_ACCESS.documents,
+        icon: Settings,
+        text: 'Settings',
+        to: '/admin/settings',
+        meta: PAGE_ACCESS.settings,
     },
 ]
 
@@ -156,34 +190,12 @@ const visibleLinks = computed(() => {
     return links.filter((link) => !link.meta || authStore.canAccess(link.meta))
 })
 
+const canAccessDashboard = computed(() => authStore.canAccess(PAGE_ACCESS.dashboard))
 const canAccessArchived = computed(() => authStore.canAccess(PAGE_ACCESS.archivedInitiatives))
+
+onMounted(() => {
+    if (canAccessDashboard.value) {
+        dashboardEmbedStore.fetchDashboards().catch(() => { })
+    }
+})
 </script>
-
-<style scoped>
-.drawer-footer-divider {
-    background: rgba(255, 255, 255, 0.15);
-}
-
-.drawer-footer-link {
-    align-items: center;
-    border-radius: 10px;
-    color: rgba(255, 255, 255, 0.75);
-    display: flex;
-    font-size: 0.8125rem;
-    font-weight: 500;
-    gap: 10px;
-    padding: 8px 12px;
-    text-decoration: none;
-    transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-.drawer-footer-link:hover {
-    background: rgba(255, 255, 255, 0.12);
-    color: #ffffff;
-}
-
-.drawer-footer-link:focus-visible {
-    outline: 2px solid rgba(255, 255, 255, 0.7);
-    outline-offset: 2px;
-}
-</style>

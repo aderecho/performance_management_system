@@ -6,13 +6,14 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.views import APIView
 from django.db import transaction
 from django.shortcuts import get_object_or_404
-from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
+from rest_framework.permissions import BasePermission, IsAuthenticatedOrReadOnly, IsAuthenticated
 from apps.core.models import UserUnit
 from apps.pme.models import (
     Template,
     TemplateNodeType,
     ReportingFrequency,
     Document,
+    DashboardEmbed,
     Item,
     ReportingPeriod,
     Initiative,
@@ -25,6 +26,7 @@ from apps.pme.serializers import (
     TemplateNodeTypeSerializer,
     ReportingFrequencySerializer,
     DocumentSerializer,
+    DashboardEmbedSerializer,
     GeneratePeriodsRequestSerializer,
     DocumentItemsQuerySerializer,
     ItemFilterSerializer,
@@ -41,7 +43,7 @@ from apps.pme.services import (
     get_dashboard_summary
 )
 from apps.authentication.models import AuditLog
-from apps.authentication.services import AuditLogService
+from apps.authentication.services import AuditLogService, user_has_effective_permission
 
 
 def changed_fields_from_serializer(serializer):
@@ -59,6 +61,21 @@ def record_pme_audit(request, action, target, summary, metadata=None):
         summary=summary,
         metadata=metadata or {},
     )
+
+
+class DashboardEmbedPermission(BasePermission):
+    def has_permission(self, request, view):
+        user = request.user
+        if not user or not user.is_authenticated:
+            return False
+
+        if getattr(user, "is_superuser", False):
+            return True
+
+        if view.action in ["list", "retrieve"]:
+            return user_has_effective_permission(user, "pme.view_document")
+
+        return False
 
 
 class TemplateViewSet(viewsets.ModelViewSet):
@@ -166,6 +183,47 @@ class DocumentViewSet(viewsets.ModelViewSet):
         )
 
         return Response(serializer.data)
+
+
+class DashboardEmbedViewSet(viewsets.ModelViewSet):
+    queryset = DashboardEmbed.objects.select_related("created_by")
+    serializer_class = DashboardEmbedSerializer
+    permission_classes = [DashboardEmbedPermission]
+
+    def perform_create(self, serializer):
+        dashboard = serializer.save()
+        record_pme_audit(
+            self.request,
+            "dashboard_embed.create",
+            dashboard,
+            f"Created dashboard embed {dashboard.name}.",
+            metadata={"src": dashboard.src},
+        )
+
+    def perform_update(self, serializer):
+        dashboard = serializer.save()
+        record_pme_audit(
+            self.request,
+            "dashboard_embed.update",
+            dashboard,
+            f"Updated dashboard embed {dashboard.name}.",
+            metadata={"fields": changed_fields_from_serializer(serializer)},
+        )
+
+    def perform_destroy(self, instance):
+        target_id = instance.id
+        target_label = instance.name
+        instance.delete()
+        AuditLogService.record(
+            request=self.request,
+            module=AuditLog.MODULE_PME,
+            action="dashboard_embed.delete",
+            target_type="dashboardembed",
+            target_id=target_id,
+            target_label=target_label,
+            summary=f"Deleted dashboard embed {target_label}.",
+            metadata={},
+        )
 
 
 class ItemViewSet(viewsets.ModelViewSet):

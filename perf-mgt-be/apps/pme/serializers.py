@@ -1,8 +1,11 @@
 from rest_framework import serializers
+from urllib.parse import urlparse
+from django.utils.text import slugify
 from apps.pme.models import (
     Template,
     TemplateNodeType,
     Document,
+    DashboardEmbed,
     Item,
     ReportingPeriod,
     Initiative,
@@ -118,6 +121,56 @@ class DocumentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Document
         fields = "__all__"
+
+
+class DashboardEmbedSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DashboardEmbed
+        fields = [
+            "id",
+            "slug",
+            "name",
+            "src",
+            "created_by",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = [
+            "id",
+            "slug",
+            "created_by",
+            "created_at",
+            "updated_at",
+        ]
+
+    def validate_src(self, value):
+        parsed_url = urlparse(value)
+        if (
+            parsed_url.scheme != "https"
+            or parsed_url.netloc != "lookerstudio.google.com"
+            or not parsed_url.path.startswith("/embed/reporting/")
+        ):
+            raise serializers.ValidationError(
+                "Use a Looker Studio embed URL from lookerstudio.google.com."
+            )
+
+        return value
+
+    def create(self, validated_data):
+        request = self.context.get("request")
+        base_slug = slugify(validated_data["name"]) or "dashboard"
+        slug = base_slug
+        suffix = 2
+
+        while DashboardEmbed.objects.filter(slug=slug).exists():
+            slug = f"{base_slug}-{suffix}"
+            suffix += 1
+
+        return DashboardEmbed.objects.create(
+            **validated_data,
+            slug=slug,
+            created_by=request.user,
+        )
 
 
 class ReportingPeriodSerializer(serializers.ModelSerializer):

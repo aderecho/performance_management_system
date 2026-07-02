@@ -1,6 +1,11 @@
 export const PAGE_ACCESS = Object.freeze({
   documents: {},
-  dashboard: {},
+  dashboard: {
+    requiredPermission: 'pme.view_document',
+  },
+  settings: {
+    requiresSuperAdmin: true,
+  },
   users: {
     requiredPermission: 'authentication.view_user',
   },

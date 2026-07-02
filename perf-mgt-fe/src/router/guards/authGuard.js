@@ -9,18 +9,22 @@ export async function authGuard(to, from, next) {
     await auth.checkSession()
   }
 
+  const homePath = auth.canAccess({ requiredPermission: 'pme.view_document' })
+    ? '/admin/dashboard'
+    : '/documents'
+
   // Require authentication if user is not logged in
   if (requiresAuth && !auth.isAuthenticated) {
     return next('/login')
   }
 
   if (requiresAuth && !auth.canAccess(to.meta)) {
-    return next('/admin/dashboard')
+    return next(to.path === homePath ? false : homePath)
   }
 
   // Redirect logged-in users away from /login
   if (to.path === '/login' && auth.isAuthenticated) {
-    return next('/admin/dashboard')
+    return next(homePath)
   }
 
   return next()
