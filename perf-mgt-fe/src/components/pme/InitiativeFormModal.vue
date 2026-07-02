@@ -1,30 +1,65 @@
 <template>
   <q-dialog :model-value="modelValue" @update:model-value="close">
-    <q-card class="q-pa-sm dialog-md">
-      <q-card-section class="text-h6">
-        {{ isEdit ? 'Edit Initiative' : 'Add Initiative' }}
+    <q-card class="pme-initiative-dialog rounded-lg shadow-8">
+      <!-- HEADER -->
+      <q-card-section class="pme-initiative-header row items-center no-wrap q-pa-md">
+        <div class="pme-initiative-header-icon">
+          <component :is="isEdit ? SquarePen : Ruler" :size="20" :stroke-width="2.2" />
+        </div>
+        <div class="min-w-0 q-ml-md col">
+          <div class="text-h6 text-weight-bold leading-snug">
+            {{ isEdit ? 'Edit Initiative' : 'Add Initiative' }}
+          </div>
+          <div class="text-caption text-blue-grey-6">
+            {{
+              isEdit
+                ? 'Update the details of this initiative.'
+                : 'Create a new initiative for a performance measure.'
+            }}
+          </div>
+        </div>
+        <q-btn flat round dense icon="close" color="grey-7" class="flex-none" @click="close(false)">
+          <q-tooltip>Close</q-tooltip>
+        </q-btn>
       </q-card-section>
 
-      <q-form @submit.prevent="onSubmit">
-        <q-card-section class="q-gutter-xs">
-          <!-- Indicator -->
-          <q-select
-            v-model="item"
-            :options="itemOptions"
-            label="Performance Measure"
-            emit-value
-            map-options
-            dense
-            options-dense
-            outlined
-            :disable="!isEdit && !itemOptions.length"
-            popup-content-class="pme-initiative-item-menu"
-            :error="!!itemError"
-            :error-message="itemError"
-          />
+      <q-separator />
 
-          <div v-if="!isEdit && !itemOptions.length" class="text-caption text-negative">
-            No authorized performance measures available for your unit.
+      <q-form @submit.prevent="onSubmit">
+        <q-card-section class="pme-initiative-body q-pa-md q-gutter-y-md">
+          <!-- Indicator -->
+          <div>
+            <q-select
+              v-model="item"
+              :options="filteredItemOptions"
+              label="Performance Measure"
+              emit-value
+              map-options
+              dense
+              options-dense
+              outlined
+              use-input
+              input-debounce="200"
+              clearable
+              class="rounded-input"
+              :disable="!isEdit && !itemOptions.length"
+              popup-content-class="pme-initiative-item-menu"
+              :error="!!itemError"
+              :error-message="itemError"
+              @filter="filterItems"
+            >
+              <template #no-option>
+                <q-item>
+                  <q-item-section class="text-grey-7">
+                    No matching performance measures.
+                  </q-item-section>
+                </q-item>
+              </template>
+            </q-select>
+
+            <div v-if="!isEdit && !itemOptions.length" class="text-caption text-negative q-mt-xs">
+              No authorized performance measures available for your unit.
+            </div>
           </div>
 
           <!-- Description -->
@@ -33,29 +68,32 @@
             label="Description"
             dense
             outlined
+            class="rounded-input"
             :error="!!descriptionError"
             :error-message="descriptionError"
           />
 
-          <div class="row">
-            <div class="col-6 q-pr-sm">
+          <div class="row q-col-gutter-md">
+            <div class="col-12 col-sm-6">
               <q-input
                 v-model.number="value"
                 type="number"
                 label="Accomplishment Value"
                 dense
                 outlined
+                class="rounded-input"
                 :error="!!valueError"
                 :error-message="valueError"
               />
             </div>
 
-            <div class="col-6">
+            <div class="col-12 col-sm-6">
               <q-input
                 v-model="target_date"
                 label="Target Date"
                 dense
                 outlined
+                class="rounded-input"
                 :error="!!targetDateError"
                 :error-message="targetDateError"
               >
@@ -77,18 +115,23 @@
             label="Remarks"
             dense
             outlined
+            autogrow
+            class="rounded-input"
             :error="!!remarksError"
             :error-message="remarksError"
-            class="q-pb-none"
           />
         </q-card-section>
 
-        <q-card-actions align="right" class="q-pr-md">
+        <q-separator />
+
+        <q-card-actions align="right" class="q-pa-md">
           <q-btn flat label="Cancel" color="grey-7" @click="close(false)" />
           <q-btn
             type="submit"
+            unelevated
             label="Submit"
             color="primary"
+            class="rounded-md q-px-lg"
             :disable="!canSubmit"
             :loading="isSubmitting || loading"
           />
@@ -99,11 +142,12 @@
 </template>
 
 <script setup>
-import { computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useForm, useField } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { initiativeSchema } from 'src/validators/initiative.schema'
 import { today } from 'src/helpers/date'
+import { Ruler, SquarePen } from 'lucide-vue-next'
 
 const emit = defineEmits(['update:modelValue', 'submitted'])
 
@@ -206,6 +250,27 @@ const itemOptions = computed(() => {
 
   return authorizedItemOptions.value
 })
+
+//SEARCHABLE DROPDOWN
+const filteredItemOptions = ref([])
+
+watch(
+  itemOptions,
+  (options) => {
+    filteredItemOptions.value = options
+  },
+  { immediate: true },
+)
+
+function filterItems(search, update) {
+  update(() => {
+    const needle = search.trim().toLowerCase()
+
+    filteredItemOptions.value = needle
+      ? itemOptions.value.filter((option) => option.label.toLowerCase().includes(needle))
+      : itemOptions.value
+  })
+}
 
 const canSubmit = computed(() => isEdit.value || itemOptions.value.length > 0)
 

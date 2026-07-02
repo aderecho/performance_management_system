@@ -1,66 +1,77 @@
+import { PAGE_ACCESS } from './pageAccess'
+
 const routes = [
   {
     path: '/',
     redirect: '/admin/dashboard',
-  },
-  {
-    path: '/admin',
-    redirect: '/admin/dashboard',
     component: () => import('layouts/MainLayout.vue'),
+    meta: { requiresAuth: true },
     children: [
-      // {
-      //   path: '',
-      //   component: () => import('pages/IndexPage.vue'),
-      //   meta: { requiresAuth: true }
-      // },
+      {
+        path: '/documents',
+        name: 'documents',
+        component: () => import('pages/DocumentPage.vue'),
+        meta: PAGE_ACCESS.documents,
+      },
       {
         path: '/documents/:documentId',
         name: 'documents.show',
         component: () => import('pages/PmePage.vue'),
         props: true,
-        meta: { requiresAuth: true }
+        meta: PAGE_ACCESS.documents,
       },
       {
         path: '/admin/dashboard',
         name: 'dashboard',
         component: () => import('pages/DashboardPage.vue'),
-        meta: { requiresAuth: true }
+        meta: PAGE_ACCESS.dashboard,
+      },
+      {
+        path: '/admin/dashboards/:dashboardSlug',
+        name: 'embedded-dashboard',
+        component: () => import('pages/EmbeddedDashboardPage.vue'),
+        meta: PAGE_ACCESS.dashboard,
+      },
+      {
+        path: '/admin/settings',
+        name: 'settings',
+        component: () => import('pages/SettingsPage.vue'),
+        meta: PAGE_ACCESS.settings,
       },
       {
         path: '/admin/users',
         name: 'users',
         component: () => import('pages/UserPage.vue'),
-        meta: { requiresAuth: true, requiredPermission: 'authentication.view_user' }
+        meta: PAGE_ACCESS.users,
       },
       {
         path: '/admin/roles',
         name: 'roles',
         component: () => import('pages/RolePage.vue'),
-        meta: { requiresAuth: true, requiredPermission: 'auth.view_group' }
+        meta: PAGE_ACCESS.roles,
       },
       {
         path: '/admin/permissions',
         name: 'permissions',
         component: () => import('pages/PermissionPage.vue'),
-        meta: {
-          requiresAuth: true,
-          requiredPermissions: [
-            'auth.view_permission',
-            'authentication.view_user',
-            'authentication.change_user'
-          ]
-        }
+        meta: PAGE_ACCESS.permissions,
       },
-       {
+      {
         path: '/admin/audit-logs',
         name: 'audit-logs',
         component: () => import('pages/AuditLogPage.vue'),
-        meta: { requiresAuth: true, requiresSuperAdmin: true }
+        meta: PAGE_ACCESS.auditLogs,
       },
+      {
+        path: '/admin/archived/initiatives',
+        name: 'archived-initiatives',
+        component: () => import('pages/ArchivedInitiativePage.vue'),
+        meta: PAGE_ACCESS.archivedInitiatives,
+      }
     ],
   },
-  { 
-    path: '/login', 
+  {
+    path: '/login',
     component: () => import('pages/LoginPage.vue'),
   },
 

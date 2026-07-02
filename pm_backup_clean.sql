@@ -27,7 +27,8 @@ SET default_table_access_method = heap;
 
 CREATE TABLE public.auth_group (
     id integer NOT NULL,
-    name character varying(150) NOT NULL
+    name character varying(150) NOT NULL,
+    is_deleted boolean DEFAULT false NOT NULL
 );
 
 
@@ -558,7 +559,7 @@ ALTER TABLE public.token_blacklist_outstandingtoken ALTER COLUMN id ADD GENERATE
 -- Data for Name: auth_group; Type: TABLE DATA; Schema: public; Owner: itcadmin
 --
 
-COPY public.auth_group (id, name) FROM stdin;
+COPY public.auth_group (id, name, is_deleted) FROM stdin;
 \.
 
 
@@ -1083,6 +1084,7 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 33	token_blacklist	0011_linearizes_history	2026-04-13 05:22:26.913885+00
 34	token_blacklist	0012_alter_outstandingtoken_user	2026-04-13 05:22:26.942831+00
 35	token_blacklist	0013_alter_blacklistedtoken_options_and_more	2026-04-13 05:22:26.970648+00
+36	authentication	0003_add_auth_group_is_deleted	2026-06-29 00:00:00+00
 \.
 
 
@@ -1610,7 +1612,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 21, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: itcadmin
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 35, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 36, true);
 
 
 --

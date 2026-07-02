@@ -64,6 +64,7 @@ def build_document_item(
     document,
     reporting_period=None,
     item_id=None,
+    show_all=False,
     request=None,
 ):
 
@@ -93,9 +94,11 @@ def build_document_item(
                     ).values_list("id", flat=True)
                 )
                 submit_item_ids = set(allowed_item_ids)
+                if show_all:
+                    allowed_item_ids = None
 
             except UserUnit.DoesNotExist:
-                allowed_item_ids = set()
+                allowed_item_ids = None if show_all else set()
     else:
         allowed_item_ids = set()
 

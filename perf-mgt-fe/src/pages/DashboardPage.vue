@@ -1,8 +1,11 @@
 <template>
   <q-page class="bg-page q-pa-md">
     <PageComboHeader
-      title="Dashboard"
-      :breadcrumbs="[{ label: 'Admin' }, { label: 'Dashboard' }]"
+      title="Performance Dashboard"
+      :breadcrumbs="[
+        { label: 'Admin' }, 
+        { label: 'Dashboard' }
+      ]"
       :show-filter="false"
     />
 

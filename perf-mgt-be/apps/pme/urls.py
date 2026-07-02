@@ -8,6 +8,7 @@ from .views import (
     ItemViewSet,
     ReportingPeriodViewSet,
     InitiativeViewSet,
+    DashboardEmbedViewSet,
     DashboardSummaryView
 )
 
@@ -16,6 +17,7 @@ router.register(r"templates", TemplateViewSet, basename="templates")
 router.register(r"template-node-types", TemplateNodeTypeViewSet, basename="template-node-types")
 router.register(r"reporting-frequencies", ReportingFrequencyViewSet, basename="reporting-frequencies")
 router.register(r"documents", DocumentViewSet, basename="documents")
+router.register(r"dashboard-embeds", DashboardEmbedViewSet, basename="dashboard-embeds")
 router.register(r"items", ItemViewSet, basename="items")
 router.register(r"reporting-periods", ReportingPeriodViewSet, basename="reporting-periods")
 router.register(r"initiatives", InitiativeViewSet, basename="initiatives")
