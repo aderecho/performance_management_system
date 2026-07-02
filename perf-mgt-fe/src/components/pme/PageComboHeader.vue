@@ -18,7 +18,14 @@
 
       <!-- BUTTONS -->
       <div class="flex items-center">
-        <q-btn class="q-mr-sm" icon="add" :label=" $q.screen.lt.sm ? '' : 'Add New Initiative'" color="primary" @click="$emit('add-initiative')" />
+        <q-btn
+          v-if="canAddInitiative"
+          class="q-mr-sm"
+          icon="add"
+          :label="$q.screen.lt.sm ? '' : 'Add New Initiative'"
+          color="primary"
+          @click="$emit('add-initiative')"
+        />
         <PageFilter @apply="forwardFilter" />
       </div>
     </div>
@@ -49,6 +56,10 @@ defineProps({
   buttons: {
     type: Array,
     default: () => []
+  },
+  canAddInitiative: {
+    type: Boolean,
+    default: true
   }
 })
 </script>

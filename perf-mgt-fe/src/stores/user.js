@@ -75,13 +75,14 @@ export const useUserStore = defineStore('userStore', {
             }
         },
 
-        async updateUserPermissions(id, permissionIds) {
+        async updateUserPermissions(id, permissionIds, deniedPermissionIds = []) {
             this.loading.save = true
             this.error.save = null
 
             try {
                 const response = await api.patch(`/auth/users/${id}/`, {
                     user_permission_ids: permissionIds,
+                    denied_permission_ids: deniedPermissionIds,
                 })
                 const index = this.users.findIndex(user => user.id === id)
 

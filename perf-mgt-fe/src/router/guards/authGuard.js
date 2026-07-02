@@ -2,6 +2,7 @@ import { useAuthStore } from 'src/stores/auth'
 
 export async function authGuard(to, from, next) {
   const auth = useAuthStore()
+  const requiresAuth = to.matched.some((route) => route.meta.requiresAuth)
 
   // Check for existing session
   if (!auth.sessionChecked) {
@@ -9,11 +10,11 @@ export async function authGuard(to, from, next) {
   }
 
   // Require authentication if user is not logged in
-  if (to.meta.requiresAuth && !auth.isAuthenticated) {
+  if (requiresAuth && !auth.isAuthenticated) {
     return next('/login')
   }
 
-  if (to.meta.requiresAuth && !auth.canAccess(to.meta)) {
+  if (requiresAuth && !auth.canAccess(to.meta)) {
     return next('/admin/dashboard')
   }
 

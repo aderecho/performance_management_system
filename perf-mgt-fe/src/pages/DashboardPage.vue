@@ -1,10 +1,11 @@
 <template>
   <q-page class="bg-page q-pa-md">
     <PageComboHeader
-      title="Dashboard"
+      title="Performance Dashboard"
       :breadcrumbs="[{ label: 'Admin' }, { label: 'Dashboard' }]"
       :show-filter="false"
     />
+
 
     <DashboardFilters
       v-model="filters"
